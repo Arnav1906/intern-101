@@ -24,12 +24,12 @@ Add the following to `~/.claude/settings.json`:
     "intern-101": {
       "source": {
         "source": "github",
-        "repo": "ArnavBhalla/intern-101"
+        "repo": "Arnav1906/intern-101"
       }
     }
   },
   "enabledPlugins": {
-    "ArnavBhalla@intern-101": true
+    "Arnav1906@intern-101": true
   }
 }
 ```
