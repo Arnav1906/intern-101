@@ -6,9 +6,10 @@ user_invocable: true
 
 # /daily-update — Daily Status Update
 
-Two modes:
-- **No arguments:** auto-pulls today's session summaries from `chat-contexts/` and generates the update.
-- **With arguments (`{{ arguments }}`):** uses the provided notes directly.
+Three modes:
+- **`--yesterday`:** same as auto-mode but pulls yesterday's sessions.
+- **No arguments:** auto-pulls today's session summaries from `chat-contexts/`.
+- **Other arguments:** uses the provided notes directly (skip to Format Step).
 
 ---
 
@@ -25,15 +26,19 @@ If `{{ arguments }}` is non-empty, skip to the **Format Step**.
 ```bash
 python -c "
 import os, glob
-from datetime import datetime
+from datetime import datetime, timedelta
 
-today = datetime.now().strftime('%Y-%m-%d')
+arg = '{{ arguments }}'.strip().lower()
+if arg == '--yesterday':
+    target_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+else:
+    target_date = datetime.now().strftime('%Y-%m-%d')
 ctx_dir = os.path.join(os.getcwd(), 'chat-contexts')
 if not os.path.isdir(ctx_dir):
     print('NONE')
 else:
     results = [f for f in sorted(glob.glob(os.path.join(ctx_dir, '*.md')))
-               if os.path.basename(f).startswith(today) and os.path.basename(f) != 'INDEX.md']
+               if os.path.basename(f).startswith(target_date) and os.path.basename(f) != 'INDEX.md']
     print('\n'.join(results) if results else 'NONE')
 " 2>&1
 ```

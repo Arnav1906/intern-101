@@ -18,7 +18,7 @@ if not os.path.isfile(idx_path):
 else:
     rows = [l for l in open(idx_path, encoding='utf-8').readlines()
             if l.strip().startswith('|') and '---' not in l and 'Date' not in l and l.strip() != '|']
-    for r in rows[-3:]:
+    for r in rows[-5:]:
         m = re.search(r'\`([^`]+\.md)\`', r)
         title = re.findall(r'\|([^|]+)', r)
         date = title[1].strip() if len(title) > 1 else ''
@@ -36,7 +36,7 @@ else:
 Show last sessions as a numbered list:
 
 ```
-Last sessions:
+Last sessions (up to 5):
   1. <date> — <title>
   2. <date> — <title>
   3. <date> — <title>  ← most recent
@@ -78,9 +78,3 @@ Read full chat-context file. Ask about `_progress.md` as above.
 ```
 
 Then ask: *"Want to pick up from here, or is there something new?"*
-
-## Notes
-
-- Never bulk-read files without asking first.
-- Do not read raw `.jsonl` files — only extracted `chat-contexts/` markdown files.
-- If `chat-contexts/` doesn't exist: "No session history yet. Run `/extract-today` after your first session."

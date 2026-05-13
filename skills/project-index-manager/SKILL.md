@@ -21,10 +21,6 @@ Transforms a scattered project directory into a self-documenting workspace by gr
 - New files added to a sub-project → update its `_Index.md`
 - New sub-project emerges → add to `projects/`, root `_Index.md`, and CLAUDE.md
 
-**When NOT to use:**
-- Single-domain projects (just create one `_Index.md` at root)
-- Projects already organized with their own conventions
-
 ---
 
 ## The Structure
@@ -216,12 +212,9 @@ At the end of every session, invoke the `chat-context-extractor` skill with no a
 ---
 
 ## Common Mistakes
-
-| Mistake | Fix |
-|---|---|
-| Putting `chat-contexts/` inside a sub-project | Keep at root — shared across all sub-projects |
-| Leaving stub Index files empty | Populate from chat-contexts and existing docs immediately |
-| Naming sub-projects by technology | `sql-files/` is bad; `compositerates-logging/` is good |
-| Moving build artifacts / `.git/` | Never — breaks paths and tooling |
-| Not updating `_progress.md` after work | Future sessions waste time re-discovering state |
-| Root `_Index.md` only covers sub-projects | Must also explain every non-project directory |
+- Put `chat-contexts/` at root, not inside a sub-project.
+- Populate Index files immediately — never leave stubs empty.
+- Name sub-projects by domain, not technology (`erc-adoption` not `sql-files`).
+- Never move `.git/`, `.claude/`, or build artifacts.
+- Update `_progress.md` after work — future sessions depend on it.
+- Root `_Index.md` must explain every non-project directory too.
