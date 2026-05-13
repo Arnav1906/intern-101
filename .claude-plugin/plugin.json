@@ -1,7 +1,7 @@
 {
   "name": "intern-101",
   "description": "Session management and project organization skills for Claude Code — daily updates, context extraction, project indexing, and session catchup.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Arnav Bhalla"
   },
@@ -12,6 +12,8 @@
     "./skills/chat-context-extractor",
     "./skills/catchup",
     "./skills/extract-today",
-    "./skills/daily-update"
+    "./skills/daily-update",
+    "./skills/recall",
+    "./skills/status"
   ]
 }

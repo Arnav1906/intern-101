@@ -11,6 +11,8 @@ A Claude Code plugin for working professionals. Five skills that handle the repe
 | `/catchup` | Session-start briefing — shows last 3 sessions, asks what to load, delivers a "where you left off" summary. |
 | `/extract-today` | Finds all new sessions from today not yet extracted, asks for confirmation, batch-extracts them all. |
 | `/daily-update` | Auto-reads today's session summaries and generates a 5–7 point plain-language status update for your supervisor. |
+| `/recall <query>` | Searches past session titles and summaries for a keyword. Returns matching sessions with snippets. |
+| `/status` | Shows all sub-projects' current status, pending items, and next actions in one table. |
 
 ## Install
 
@@ -44,7 +46,11 @@ Then restart Claude Code. All five skills will be available immediately.
 
 ```
 # Start of day
-/catchup                  → see what you left off yesterday
+/catchup                  → last 5 sessions, pick up where you left off
+/status                   → one-page overview of all sub-project states
+
+# During the day
+/recall <topic>           → find past sessions on a topic before starting new work
 
 # End of day
 /extract-today            → save all today's sessions as context docs
