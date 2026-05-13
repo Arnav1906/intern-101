@@ -19,9 +19,30 @@ Path optionally provided via `{{ arguments }}`.
 
 ## Step 0 — Auto-Locate Latest Session (only when no path given)
 
+If `.intern101/find_project_dir.py` exists, run:
+
 ```bash
 python -c "
-import os, glob, shutil, sys
+import os, glob, sys
+sys.path.insert(0, '.intern101')
+from find_project_dir import find_project_dir
+d = find_project_dir()
+if not d:
+    print('ERROR: could not find project session dir for: ' + os.getcwd())
+    sys.exit(1)
+files = sorted(glob.glob(os.path.join(d, '*.jsonl')), key=os.path.getmtime, reverse=True)
+if not files:
+    print('ERROR: no .jsonl files in ' + d)
+    sys.exit(1)
+print(files[0])
+" 2>&1
+```
+
+If `.intern101/find_project_dir.py` does not exist, use the full fallback:
+
+```bash
+python -c "
+import os, glob, sys
 
 cwd = os.getcwd()
 
@@ -35,43 +56,31 @@ def path_to_hash(p):
 
 hash_try = path_to_hash(cwd)
 claude_projects = os.path.join(os.path.expanduser('~'), '.claude', 'projects')
-
 project_session_dir = None
 for attempt in [hash_try, hash_try.lower()]:
     d = os.path.join(claude_projects, attempt)
     if os.path.isdir(d):
         project_session_dir = d
         break
-
 if not project_session_dir:
     last = os.path.basename(cwd).lower().replace('_', '-')
     for name in os.listdir(claude_projects):
         if name.lower().endswith(last):
             project_session_dir = os.path.join(claude_projects, name)
             break
-
 if not project_session_dir:
     print('ERROR: could not find project session dir for: ' + cwd)
     exit(1)
-
 jsonl_files = glob.glob(os.path.join(project_session_dir, '*.jsonl'))
 if not jsonl_files:
     print('ERROR: no .jsonl files in ' + project_session_dir)
     exit(1)
 jsonl_files.sort(key=os.path.getmtime, reverse=True)
-latest = jsonl_files[0]
-
-claudechats_dir = os.path.join(cwd, 'claudechats')
-os.makedirs(claudechats_dir, exist_ok=True)
-dest = os.path.join(claudechats_dir, os.path.basename(latest))
-if not os.path.exists(dest):
-    shutil.copy2(latest, dest)
-
-print(latest)
+print(jsonl_files[0])
 " 2>&1
 ```
 
-Parse last non-empty line. If `ERROR:` → report and stop. Otherwise use that path as source.
+Parse last non-empty line. If `ERROR:` → report and stop. Otherwise use as source path.
 
 ---
 
