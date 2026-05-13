@@ -1,0 +1,24 @@
+{
+  "name": "intern-101",
+  "id": "intern-101",
+  "owner": {
+    "name": "Arnav Bhalla"
+  },
+  "metadata": {
+    "description": "Session management and project organization skills for Claude Code",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "intern-101",
+      "source": "./",
+      "description": "5 skills for working professionals using Claude Code: organize projects with index/progress files, auto-extract session context, resume from last session, batch-extract today's sessions, and generate plain-language daily updates.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Arnav Bhalla"
+      },
+      "keywords": ["productivity", "session-management", "daily-update", "project-organization", "context"],
+      "category": "productivity"
+    }
+  ]
+}
