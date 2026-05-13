@@ -15,30 +15,34 @@ from datetime import datetime
 
 cwd = os.getcwd()
 
-def path_to_hash(p):
-    if sys.platform == 'win32':
-        h = p.replace(':\\\\', '--').replace('\\\\', '-').replace('/', '-')
-        if h: h = h[0].lower() + h[1:]
-    else:
-        h = p.replace('/', '-')
-    return h
-
-hash_try = path_to_hash(cwd)
-claude_projects = os.path.join(os.path.expanduser('~'), '.claude', 'projects')
-
+# Use helper if bootstrapped
 project_session_dir = None
-for attempt in [hash_try, hash_try.lower()]:
-    d = os.path.join(claude_projects, attempt)
-    if os.path.isdir(d):
-        project_session_dir = d
-        break
-
-if not project_session_dir:
-    last = os.path.basename(cwd).lower().replace('_', '-')
-    for name in os.listdir(claude_projects):
-        if name.lower().endswith(last):
-            project_session_dir = os.path.join(claude_projects, name)
+helper = os.path.join(cwd, '.intern101', 'find_project_dir.py')
+if os.path.isfile(helper):
+    sys.path.insert(0, os.path.join(cwd, '.intern101'))
+    from find_project_dir import find_project_dir
+    project_session_dir = find_project_dir(cwd)
+else:
+    def path_to_hash(p):
+        if sys.platform == 'win32':
+            h = p.replace(':\\\\', '--').replace('\\\\', '-').replace('/', '-')
+            if h: h = h[0].lower() + h[1:]
+        else:
+            h = p.replace('/', '-')
+        return h
+    hash_try = path_to_hash(cwd)
+    claude_projects = os.path.join(os.path.expanduser('~'), '.claude', 'projects')
+    for attempt in [hash_try, hash_try.lower()]:
+        d = os.path.join(claude_projects, attempt)
+        if os.path.isdir(d):
+            project_session_dir = d
             break
+    if not project_session_dir:
+        last = os.path.basename(cwd).lower().replace('_', '-')
+        for name in os.listdir(claude_projects):
+            if name.lower().endswith(last):
+                project_session_dir = os.path.join(claude_projects, name)
+                break
 
 if not project_session_dir:
     print('ERROR: could not find project session dir for: ' + cwd)
