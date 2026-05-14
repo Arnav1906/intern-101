@@ -16,25 +16,36 @@ A Claude Code plugin for working professionals. Five skills that handle the repe
 
 ## Install
 
-Add the following to `~/.claude/settings.json`:
+### Option 1 — CLI (easiest)
+
+```bash
+claude plugin marketplace add Arnav1906/intern-101
+```
+
+Then restart Claude Code.
+
+### Option 2 — npm
+
+```bash
+npm install -g intern-101
+```
+
+### Manual fallback
+
+If the CLI command doesn't work, add to `~/.claude/settings.json`:
 
 ```json
 {
   "extraKnownMarketplaces": {
     "intern-101": {
-      "source": {
-        "source": "github",
-        "repo": "Arnav1906/intern-101"
-      }
+      "source": { "source": "github", "repo": "Arnav1906/intern-101" }
     }
   },
-  "enabledPlugins": {
-    "Arnav1906@intern-101": true
-  }
+  "enabledPlugins": { "Arnav1906@intern-101": true }
 }
 ```
 
-Then restart Claude Code. All five skills will be available immediately.
+Then restart Claude Code. All skills will be available immediately.
 
 ## Requirements
 

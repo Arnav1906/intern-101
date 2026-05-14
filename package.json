@@ -1,0 +1,18 @@
+{
+  "name": "intern-101",
+  "version": "1.1.0",
+  "description": "Claude Code plugin for working professionals — session context, daily updates, project indexing, and catchup.",
+  "main": ".claude-plugin/plugin.json",
+  "keywords": ["claude-code", "claude-plugin", "productivity", "session-management", "daily-update"],
+  "author": "Arnav Bhalla",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Arnav1906/intern-101.git"
+  },
+  "files": [
+    ".claude-plugin/",
+    "skills/",
+    "README.md"
+  ]
+}
