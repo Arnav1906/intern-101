@@ -1,6 +1,6 @@
 # Intern 101
 
-A Claude Code plugin for working professionals. Five skills that handle the repetitive parts of a work session: organizing a project directory, saving session context, picking up where you left off, and writing your daily update.
+A Claude Code plugin for working professionals, generally interns. Five skills that handle the repetitive parts of a work session: organizing a project directory, saving session context, picking up where you left off, and writing your daily update.
 
 ## Skills & Commands
 
