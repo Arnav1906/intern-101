@@ -8,7 +8,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Arnav1906/intern-101.git"
+    "url": "git+https://github.com/Arnav1906/intern-101.git"
   },
   "files": [
     ".claude-plugin/",
