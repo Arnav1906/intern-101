@@ -1,6 +1,8 @@
 ---
 name: project-index-manager
 description: Use when a project directory has scattered files across multiple work domains with no clear organization, when starting a multi-domain project, or when a user asks to set up project indexes, progress files, or a routing index. Also use when updating _Index.md or _progress.md after completing work on a sub-project.
+origin: intern-101
+allowed-tools: [Read, Write, Edit, Bash]
 ---
 
 # Project Index Manager
@@ -53,42 +55,7 @@ project-root/
 Before doing anything else, check if `.intern101/find_project_dir.py` exists. If not, create it:
 
 ```bash
-python -c "
-import os
-os.makedirs('.intern101', exist_ok=True)
-open('.intern101/find_project_dir.py', 'w').write('''
-import os, sys, glob
-
-def find_project_dir(cwd=None):
-    cwd = cwd or os.getcwd()
-    def path_to_hash(p):
-        if sys.platform == \"win32\":
-            h = p.replace(\":\\\\\\\\\", \"--\").replace(\"\\\\\\\\\", \"-\").replace(\"/\", \"-\")
-            if h: h = h[0].lower() + h[1:]
-        else:
-            h = p.replace(\"/\", \"-\")
-        return h
-    hash_try = path_to_hash(cwd)
-    claude_projects = os.path.join(os.path.expanduser(\"~\"), \".claude\", \"projects\")
-    for attempt in [hash_try, hash_try.lower()]:
-        d = os.path.join(claude_projects, attempt)
-        if os.path.isdir(d):
-            return d
-    last = os.path.basename(cwd).lower().replace(\"_\", \"-\")
-    for name in os.listdir(claude_projects):
-        if name.lower().endswith(last):
-            return os.path.join(claude_projects, name)
-    return None
-
-if __name__ == \"__main__\":
-    d = find_project_dir()
-    if not d:
-        print(\"ERROR: could not find project session dir for: \" + os.getcwd())
-        sys.exit(1)
-    print(d)
-''')
-print('bootstrapped')
-" 2>&1
+python "${CLAUDE_PLUGIN_ROOT}/scripts/project_index_manager.py" 2>&1
 ```
 
 If output is `bootstrapped` or `.intern101/find_project_dir.py` already exists, proceed.

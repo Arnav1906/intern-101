@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Architecture History — visualise</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  body { margin: 0; background: #1a1a2e; font-family: monospace; color: #eee; }
+  #header { padding: 10px 16px; background: #16213e; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  #slider-wrap { width: 100%; padding: 8px 16px; background: #0f3460; }
+  #slider { width: 100%; }
+  #commit-info { padding: 6px 16px; font-size: 12px; background: #0d0d1a; color: #aaa; border-bottom: 1px solid #333; }
+  #graph { width: 100vw; height: calc(100vh - 130px); }
+  #stats { font-size: 12px; }
+  #timeline { width: 100%; height: 60px; padding: 0 16px; overflow-x: auto; white-space: nowrap; background: #0d0d1a; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 8px; }
+  .timeline-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #e94560; cursor: pointer; border: 2px solid transparent; vertical-align: middle; }
+  .timeline-dot.active { border-color: #fff; }
+  .timeline-dot:hover { opacity: 0.8; }
+  .timeline-label { display: inline-block; font-size: 10px; color: #888; vertical-align: middle; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<div id="header">
+  <strong style="color:#e94560">visualise history</strong>
+  <span id="stats">Loading...</span>
+</div>
+<div id="timeline"></div>
+<div id="commit-info">Select a commit above to explore its architecture</div>
+<div id="graph"></div>
+<script id="snap-data" type="application/json">SNAPSHOTS_JSON_PLACEHOLDER</script>
+<script>
+const COLORS = ['#e94560','#0f3460','#533483','#e2b714','#2ec4b6','#ff9f1c','#9b5de5','#00bbf9','#f15bb5','#00f5d4'];
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// Snapshot data is embedded in a JSON script tag to prevent </script> injection
+const snapshots = JSON.parse(document.getElementById('snap-data').textContent);
+
+let currentSim = null;
+
+function loadSnapshot(snap, dotEl) {
+  document.querySelectorAll('.timeline-dot').forEach(d => d.classList.remove('active'));
+  if (dotEl) dotEl.classList.add('active');
+
+  document.getElementById('commit-info').textContent =
+    `${esc(snap.sha_short)} · ${snap.date.slice(0,10)} · ${esc(snap.message)} · ${snap.n_nodes} nodes · ${snap.n_edges} edges · ${snap.changed_files?.length || 0} files changed`;
+
+  document.getElementById('stats').textContent =
+    `${snap.n_nodes} nodes · ${snap.n_edges} edges`;
+
+  const svgEl = document.querySelector('#graph svg');
+  if (svgEl) svgEl.remove();
+  if (currentSim) currentSim.stop();
+
+  const nodes = snap.nodes.map(n => ({...n}));
+  const links = snap.edges.map(e => ({source: e.source, target: e.target, relation: e.relation}));
+  const nodeIds = new Set(nodes.map(n => n.id));
+  const validLinks = links.filter(l => nodeIds.has(l.source) && nodeIds.has(l.target));
+
+  const W = window.innerWidth, H = window.innerHeight - 130;
+  const svg = d3.select('#graph').append('svg').attr('width','100%').attr('height','100%');
+  const g = svg.append('g');
+  svg.call(d3.zoom().scaleExtent([0.05, 8]).on('zoom', e => g.attr('transform', e.transform)));
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(validLinks).id(d=>d.id).distance(60))
+    .force('charge', d3.forceManyBody().strength(-80))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide().radius(6));
+  currentSim = sim;
+
+  const link = g.append('g').selectAll('line').data(validLinks).join('line')
+    .attr('stroke','#444').attr('stroke-width',1).attr('stroke-opacity',0.6);
+
+  const node = g.append('g').selectAll('circle').data(nodes).join('circle')
+    .attr('r', 5)
+    .attr('fill', (d, i) => COLORS[i % COLORS.length])
+    .attr('title', d => d.label || d.id);
+
+  const label = g.append('g').selectAll('text').data(nodes).join('text')
+    .text(d => (d.label || d.id).slice(0, 20))
+    .attr('font-size', 9).attr('fill', '#aaa').attr('text-anchor','middle').attr('dy', 16)
+    .style('pointer-events','none');
+
+  sim.on('tick', () => {
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('cx',d=>d.x).attr('cy',d=>d.y);
+    label.attr('x',d=>d.x).attr('y',d=>d.y);
+  });
+}
+
+// Build timeline
+const timeline = document.getElementById('timeline');
+snapshots.forEach((snap, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'timeline-dot';
+  dot.title = `${snap.date.slice(0,10)}: ${esc(snap.message)}`;
+  dot.onclick = () => loadSnapshot(snap, dot);
+  timeline.appendChild(dot);
+
+  const lbl = document.createElement('div');
+  lbl.className = 'timeline-label';
+  lbl.title = esc(snap.message);
+  lbl.textContent = snap.date.slice(0,10);
+  timeline.appendChild(lbl);
+});
+
+// Load most recent
+if (snapshots.length > 0) loadSnapshot(snapshots[0], timeline.querySelector('.timeline-dot'));
+</script>
+</body>
+</html>

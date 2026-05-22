@@ -1,2 +1,7 @@
 docs/superpowers/plans/
 .claude/
+.superpowers/
+__pycache__/
+*.pyc
+*.pyo
+*.zip

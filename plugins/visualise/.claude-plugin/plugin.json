@@ -1,0 +1,14 @@
+{
+  "name": "intern-101-visualise",
+  "version": "1.0.0",
+  "description": "Knowledge graph visualisation suite for intern-101 — build, search, diff, and explore codebase architecture as interactive HTML graphs.",
+  "parent": "intern-101",
+  "skills": [
+    "./skills/visualise/",
+    "./skills/visualise-search/",
+    "./skills/visualise-gaps/",
+    "./skills/visualise-history/",
+    "./skills/visualise-diff/"
+  ],
+  "assets": "./assets/"
+}

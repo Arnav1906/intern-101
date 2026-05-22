@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Architecture Diff — visualise</title>
+<style>
+  body { margin: 0; background: #1a1a2e; font-family: monospace; color: #eee; padding: 20px; }
+  h1 { color: #e94560; margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
+  .stat-box { background: #16213e; border-radius: 6px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 28px; font-weight: bold; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 4px; }
+  .added { color: #2ec4b6; }
+  .removed { color: #e94560; }
+  .shifted { color: #e2b714; }
+  .unchanged { color: #888; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+  th { text-align: left; padding: 8px 12px; background: #16213e; color: #888; font-size: 12px; border-bottom: 1px solid #333; }
+  td { padding: 7px 12px; font-size: 13px; border-bottom: 1px solid #1e1e3a; }
+  tr:hover td { background: #16213e; }
+  .tag { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+  .tag-added { background: #0d3d3a; color: #2ec4b6; }
+  .tag-removed { background: #3d0d14; color: #e94560; }
+  .tag-shifted { background: #3d3000; color: #e2b714; }
+  section { margin-bottom: 32px; }
+  h2 { font-size: 15px; color: #ccc; border-bottom: 1px solid #333; padding-bottom: 6px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<h1>Architecture Diff</h1>
+<div class="subtitle" id="subtitle">Loading...</div>
+
+<div class="stats-grid">
+  <div class="stat-box"><div class="stat-num added" id="s-added">—</div><div class="stat-label">Nodes Added</div></div>
+  <div class="stat-box"><div class="stat-num removed" id="s-removed">—</div><div class="stat-label">Nodes Removed</div></div>
+  <div class="stat-box"><div class="stat-num shifted" id="s-shifted">—</div><div class="stat-label">Community Shifts</div></div>
+  <div class="stat-box"><div class="stat-num added" id="s-eadded">—</div><div class="stat-label">Edges Added</div></div>
+  <div class="stat-box"><div class="stat-num removed" id="s-eremoved">—</div><div class="stat-label">Edges Removed</div></div>
+</div>
+
+<section>
+<h2 class="added">+ Added Nodes</h2>
+<table id="tbl-added">
+<tr><th>Label</th><th>Type</th><th>Community</th><th>Source File</th></tr>
+</table>
+</section>
+
+<section>
+<h2 class="removed">− Removed Nodes</h2>
+<table id="tbl-removed">
+<tr><th>Label</th><th>Type</th><th>Was Community</th><th>Source File</th></tr>
+</table>
+</section>
+
+<section>
+<h2 class="shifted">~ Community Shifts</h2>
+<table id="tbl-shifted">
+<tr><th>Label</th><th>From Community</th><th>To Community</th></tr>
+</table>
+</section>
+
+<section>
+<h2>Edge Changes</h2>
+<table id="tbl-edges">
+<tr><th>Change</th><th>Source</th><th>Relation</th><th>Target</th></tr>
+</table>
+</section>
+
+<script>
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+fetch('./.diff_data.json').then(r=>r.json()).then(diff => {
+  const s = diff.stats;
+  document.getElementById('subtitle').textContent =
+    `${diff.meta_a.sha} (${diff.meta_a.date}: ${diff.meta_a.message})  →  ${diff.meta_b.sha} (${diff.meta_b.date}: ${diff.meta_b.message})`;
+
+  document.getElementById('s-added').textContent = '+' + s.nodes_added;
+  document.getElementById('s-removed').textContent = '-' + s.nodes_removed;
+  document.getElementById('s-shifted').textContent = '~' + s.nodes_shifted;
+  document.getElementById('s-eadded').textContent = '+' + s.edges_added;
+  document.getElementById('s-eremoved').textContent = '-' + s.edges_removed;
+
+  function addRows(tableId, rows, cols) {
+    const tbl = document.getElementById(tableId);
+    if (!rows.length) {
+      tbl.innerHTML += '<tr><td colspan="4" style="color:#555;font-style:italic">None</td></tr>';
+      return;
+    }
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = cols.map(c => `<td>${esc(r[c] ?? '—')}</td>`).join('');
+      tbl.appendChild(tr);
+    });
+  }
+
+  addRows('tbl-added', diff.added_nodes, ['label','type','community','source_file']);
+  addRows('tbl-removed', diff.removed_nodes, ['label','type','community','source_file']);
+
+  const etbl = document.getElementById('tbl-shifted');
+  diff.shifted_nodes.forEach(n => {
+    etbl.innerHTML += `<tr><td>${esc(n.label)}</td><td>C${esc(n.from_community)}</td><td>C${esc(n.to_community)}</td></tr>`;
+  });
+  if (!diff.shifted_nodes.length) etbl.innerHTML += '<tr><td colspan="3" style="color:#555;font-style:italic">None</td></tr>';
+
+  const eTable = document.getElementById('tbl-edges');
+  diff.added_edges.forEach(e => {
+    eTable.innerHTML += `<tr><td><span class="tag tag-added">+added</span></td><td>${esc(e.source)}</td><td>${esc(e.relation||'?')}</td><td>${esc(e.target)}</td></tr>`;
+  });
+  diff.removed_edges.forEach(e => {
+    eTable.innerHTML += `<tr><td><span class="tag tag-removed">-removed</span></td><td>${esc(e.source)}</td><td>${esc(e.relation||'?')}</td><td>${esc(e.target)}</td></tr>`;
+  });
+  if (!diff.added_edges.length && !diff.removed_edges.length) {
+    eTable.innerHTML += '<tr><td colspan="4" style="color:#555;font-style:italic">No edge changes</td></tr>';
+  }
+});
+</script>
+</body>
+</html>

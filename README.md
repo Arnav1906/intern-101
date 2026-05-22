@@ -1,28 +1,104 @@
 # Intern 101
 
-A Claude Code plugin for working professionals, generally interns. Five skills that handle the repetitive parts of a work session: organizing a project directory, saving session context, picking up where you left off, and writing your daily update.
+A standalone Claude Code plugin for interns and working professionals. Handles the repetitive parts of a work session — session catchup, daily updates, end-of-day wrap-up, project organization, and interactive codebase knowledge graphs.
 
-## Skills & Commands
+**Single entry point:** just type `/intern` and describe what you need. No need to remember skill names.
 
-| Skill / Command | What it does |
+---
+
+## Quick Start
+
+```
+/intern I'm starting work — what was I doing?   → catchup
+/intern done for today                           → wrap-up (git check + extract)
+/intern write my daily update                    → daily-update
+/intern map this codebase                        → visualise
+```
+
+Or invoke skills directly if you prefer.
+
+---
+
+## Skills
+
+### `/intern` — Dispatcher
+
+Understands natural language and routes to the right skill. Use this when you're not sure which skill you need.
+
+```
+/intern <anything>
+```
+
+Examples that work:
+- "where was I last session" → `/catchup`
+- "I'm done for today" → `/wrap-up`
+- "what did I do this week" → `/daily-update`
+- "find sessions about authentication" → `/recall`
+- "show me all project statuses" → `/status`
+- "build a graph of this repo" → `/visualise`
+
+---
+
+### Session Management
+
+| Skill | What it does |
 |---|---|
-| `project-index-manager` | Sets up a `projects/` folder with `_Index.md` + `_progress.md` per sub-project and a root `_Index.md` router. Wires `CLAUDE.md` to read the index every session. |
-| `chat-context-extractor` | Auto-finds the latest session `.jsonl`, copies it to `claudechats/`, extracts a structured summary to `chat-contexts/`, and updates the index. |
-| `/catchup` | Session-start briefing — shows last 3 sessions, asks what to load, delivers a "where you left off" summary. |
-| `/extract-today` | Finds all new sessions from today not yet extracted, asks for confirmation, batch-extracts them all. |
-| `/daily-update` | Auto-reads today's session summaries and generates a 5–7 point plain-language status update for your supervisor. |
-| `/recall <query>` | Searches past session titles and summaries for a keyword. Returns matching sessions with snippets. |
-| `/status` | Shows all sub-projects' current status, pending items, and next actions in one table. |
+| `/catchup` | Shows last 5 sessions, asks what to load, delivers a "where you left off" summary |
+| `/extract-today` | Finds all new sessions from today not yet saved, confirms, batch-extracts them |
+| `/daily-update` | Reads today's extracted sessions and generates a 5–7 point plain-language update for your supervisor |
+| `/recall <query>` | Searches past session titles and summaries for a keyword, returns matching sessions with snippets |
+| `/status` | Shows all sub-projects' current status, pending items, and next actions in one table |
+| `/wrap-up` | End-of-day: checks git status → prompts to commit if needed → extracts today's sessions |
+
+---
+
+### Project Organization
+
+| Skill | What it does |
+|---|---|
+| `project-index-manager` | Organizes a messy project into named sub-projects, each with `_Index.md` + `_progress.md`. Wires `CLAUDE.md` to load the index every session. Invoke by description: *"set up project indexes"* |
+
+---
+
+### Knowledge Graph (`/visualise` suite)
+
+| Skill | What it does |
+|---|---|
+| `/visualise [path]` | Builds an interactive HTML knowledge graph — AST + semantic extraction, Louvain community detection, god-node identification, confidence audit trail (`EXTRACTED` / `INFERRED` / `AMBIGUOUS`) |
+| `/visualise-search <query>` | Finds graph nodes by natural language — no need to know exact names |
+| `/visualise-gaps` | Lists isolated (undocumented/disconnected) nodes; `--draft` auto-generates stub docs for each |
+| `/visualise-history` | Walks git history, snapshots the graph at each commit, generates a time-slider HTML |
+| `/visualise-diff` | Color-coded diff between two snapshots — shows added, removed, and shifted nodes/edges |
+
+---
+
+## Recommended Workflow
+
+```
+# Start of day
+/catchup                         → pick up where you left off
+/status                          → one-page overview of all sub-projects
+
+# During the day
+/recall <topic>                  → find past sessions before starting new work
+/visualise                       → map the codebase architecture
+/visualise-search <query>        → find relevant nodes without knowing exact names
+
+# End of day
+/wrap-up                         → git check + optional commit + session extraction in one flow
+```
+
+---
 
 ## Install
 
-### Option 1 — CLI (easiest)
+### Option 1 — CLI
 
 ```bash
 claude plugin marketplace add Arnav1906/intern-101
 ```
 
-Then restart Claude Code.
+Restart Claude Code. All skills available immediately.
 
 ### Option 2 — npm
 
@@ -30,9 +106,9 @@ Then restart Claude Code.
 npm install -g intern-101
 ```
 
-### Manual fallback
+### Manual
 
-If the CLI command doesn't work, add to `~/.claude/settings.json`:
+Add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -45,36 +121,95 @@ If the CLI command doesn't work, add to `~/.claude/settings.json`:
 }
 ```
 
-Then restart Claude Code. All skills will be available immediately.
+---
 
 ## Requirements
 
 - [Claude Code](https://claude.ai/code)
-- Python 3.8+ (used by extraction scripts)
-- Works on Windows, macOS, and Linux
+- Python 3.8+
+- Windows, macOS, and Linux supported
 
-## Recommended Workflow
-
-```
-# Start of day
-/catchup                  → last 5 sessions, pick up where you left off
-/status                   → one-page overview of all sub-project states
-
-# During the day
-/recall <topic>           → find past sessions on a topic before starting new work
-
-# End of day
-/extract-today            → save all today's sessions as context docs
-/daily-update             → generate plain-language update for your supervisor
+**For `/visualise` skills only:**
+```bash
+pip install networkx==3.3 python-louvain==0.16
 ```
 
-## Project Index Setup (one-time per project)
+---
 
-When starting on a messy codebase, invoke the `project-index-manager` skill:
+## End-of-Day Hook (optional)
 
-> "Set up project indexes for this directory"
+Adds a passive reminder to extract sessions when you close Claude without using `/wrap-up`. Add to `~/.claude/settings.json`:
 
-Claude will explore the project, identify natural work domains, create `projects/<name>/` folders with index and progress files, build a root `_Index.md` router, and wire `CLAUDE.md` to load it every session.
+```json
+{
+  "hooks": {
+    "Stop": [
+      { "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-extract-prompt.sh\"" }
+    ]
+  }
+}
+```
+
+---
+
+## Architecture
+
+```
+intern-101/
+  skills/
+    intern/              ← dispatcher: routes all natural language to the right skill
+    catchup/
+    daily-update/
+    extract-today/
+    project-index-manager/
+    recall/
+    status/
+    wrap-up/
+
+  plugins/
+    visualise/
+      skills/            ← visualise, visualise-search, visualise-gaps, visualise-history, visualise-diff
+      assets/            ← HTML templates (graph, diff, history)
+
+  agents/
+    graph-analyst.md     ← orchestrates visualise suite with judgment (full vs incremental, sequencing)
+    session-manager.md   ← orchestrates session skills (catchup + recall + daily-update flows)
+
+  rules/
+    output-format.md     ← daily-update format, context filename convention
+    file-boundaries.md   ← no path traversal, no overwrite protection
+    graph-conventions.md ← visualise-out/ layout, graph.json schema, extract→cluster→render order
+
+  hooks/
+    hooks.json           ← Stop event → stop-extract-prompt.sh
+    stop-extract-prompt.sh
+
+  scripts/
+    lib/
+      utils.py           ← CLAUDE_PLUGIN_ROOT resolution, path helpers, file I/O
+      session.py         ← INDEX.md parsing, session file ops, slugify
+      graph.py           ← graph.json load/save/query
+    catchup.py
+    chat_context_extractor.py
+    daily_update.py
+    extract_today.py
+    project_index_manager.py
+    recall.py
+    status.py
+    wrap_up.py
+    visualise/
+      extract.py         ← AST + semantic extraction → graph.json
+      cluster.py         ← Louvain community detection
+      render.py          ← graph.json + template → graph.html
+      search.py
+      gaps.py
+      diff.py
+      history.py
+```
+
+Each skill is a thin instruction layer — all Python logic lives in `scripts/`. Skills call scripts via `python "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.py"`, which makes scripts testable independently and keeps SKILL.md files focused on flow, not implementation.
+
+---
 
 ## Author
 

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Knowledge Graph — visualise</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #1a1a2e; font-family: monospace; color: #eee; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  #controls { height: 50px; padding: 8px; background: #16213e; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  #search { background: #0f3460; border: 1px solid #e94560; color: #eee; padding: 4px 8px; border-radius: 4px; width: 220px; }
+  .tooltip { position: absolute; background: #16213e; border: 1px solid #e94560; padding: 8px; border-radius: 4px; font-size: 12px; pointer-events: none; opacity: 0; max-width: 260px; z-index: 30; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  #stats { font-size: 11px; color: #888; margin-left: auto; }
+
+  /* main flex row */
+  #main { display: flex; flex: 1; overflow: hidden; position: relative; }
+  #graph { flex: 1; min-width: 0; }
+
+  /* sidebar */
+  #sidebar { width: 0; background: #16213e; transition: width 200ms ease; overflow: hidden; position: relative; border-left: 2px solid transparent; flex-shrink: 0; }
+  #sidebar.open { width: 300px; border-left-color: #e94560; }
+  #sidebar-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: #e94560; color: #fff; width: 14px; height: 32px; border: none; cursor: pointer; border-radius: 4px 0 0 4px; font-size: 10px; z-index: 10; padding: 0; transition: right 200ms ease; }
+  #sidebar.open ~ #sidebar-toggle { right: 300px; }
+  #sidebar-content { padding: 12px; width: 300px; height: 100%; overflow-y: auto; }
+  #sidebar-content h3 { margin: 0 0 8px; color: #e94560; font-size: 13px; word-break: break-all; }
+  #sidebar-content .field { margin-bottom: 5px; font-size: 11px; color: #888; }
+  #sidebar-content .field span { color: #ccc; }
+  #sidebar-content .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; }
+  #sidebar-content .conf-extracted { color: #2ec4b6; }
+  #sidebar-content .conf-inferred { color: #e2b714; }
+  #sidebar-content .conf-ambiguous { color: #888; }
+  #sidebar-content .neighbors { margin-top: 10px; border-top: 1px solid #333; padding-top: 8px; }
+  #sidebar-content .neighbor-link { display: block; color: #e94560; cursor: pointer; font-size: 11px; margin-bottom: 3px; text-decoration: none; }
+  #sidebar-content .neighbor-link:hover { text-decoration: underline; }
+
+  /* gear + filter panel */
+  #gear-btn { position: absolute; top: 8px; right: 8px; background: #16213e; border: 1px solid #555; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; color: #888; z-index: 10; user-select: none; }
+  #gear-btn:hover { border-color: #e94560; color: #e94560; }
+  #filter-panel { position: absolute; top: 44px; right: 8px; background: #16213e; border: 1px solid #e94560; border-radius: 4px; padding: 12px; width: 210px; z-index: 20; display: none; font-size: 11px; max-height: calc(100vh - 100px); overflow-y: auto; }
+  #filter-panel h4 { margin: 0 0 8px; color: #e94560; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  #filter-panel .section-label { color: #888; margin: 8px 0 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #333; padding-top: 6px; }
+  #filter-panel .comm-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+  .comm-pill { padding: 2px 8px; border-radius: 10px; cursor: pointer; font-size: 10px; border: 1px solid transparent; }
+  .comm-pill.hidden { background: #111 !important; color: #555; text-decoration: line-through; border-color: #333; }
+  #filter-panel label { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; cursor: pointer; color: #ccc; }
+  #filter-panel input[type=checkbox] { accent-color: #e94560; }
+</style>
+</head>
+<body>
+<div id="controls">
+  <strong style="color:#e94560">visualise</strong>
+  <input id="search" type="text" placeholder="Filter nodes...">
+  <div class="legend" id="legend"></div>
+  <div id="stats"></div>
+</div>
+<div id="main">
+  <div id="graph"></div>
+  <div id="sidebar">
+    <div id="sidebar-content"></div>
+  </div>
+  <button id="sidebar-toggle">❯</button>
+  <button id="gear-btn" title="Filters">⚙</button>
+  <div id="filter-panel">
+    <h4>Filters</h4>
+    <div class="section-label">Communities</div>
+    <div id="comm-pills" class="comm-pills"></div>
+    <div class="section-label">Edge confidence</div>
+    <label><input type="checkbox" id="chk-extracted" checked> EXTRACTED</label>
+    <label><input type="checkbox" id="chk-inferred" checked> INFERRED</label>
+    <label><input type="checkbox" id="chk-ambiguous" checked> AMBIGUOUS</label>
+    <div class="section-label">Display</div>
+    <label><input type="checkbox" id="chk-labels"> Show edge labels</label>
+  </div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+const COLORS = ['#e94560','#0f3460','#533483','#e2b714','#2ec4b6','#ff9f1c','#9b5de5','#00bbf9','#f15bb5','#00f5d4'];
+function esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+let selectedNodeId = null;
+let sidebarCollapsed = false;
+const hiddenCommunities = new Set();
+const hiddenConfidence = new Set();
+let showEdgeLabels = false;
+let filterPanelOpen = false;
+
+let closeSidebar = () => {};
+let updateVisibility = () => {};
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSidebar(); } });
+
+const CONF_CLASS = {EXTRACTED:'conf-extracted', INFERRED:'conf-inferred', AMBIGUOUS:'conf-ambiguous'};
+
+fetch('./graph.json').then(r=>r.json()).then(data => {
+  const nodes = data.nodes.map(n => ({...n}));
+  const links = data.edges.map(e => ({source: e.source, target: e.target, relation: e.relation, confidence: e.confidence}));
+  const meta = data.metadata || {};
+
+  document.getElementById('stats').textContent = `${meta.n_nodes||nodes.length} nodes · ${meta.n_edges||links.length} edges · ${meta.n_communities||'?'} communities`;
+
+  const communities = [...new Set(nodes.map(n => n.community))].sort((a,b)=>a-b);
+  const colorMap = Object.fromEntries(communities.map((c,i) => [c, COLORS[i % COLORS.length]]));
+  const godSet = new Set(meta.god_nodes || []);
+
+  function openSidebar(d) {
+    selectedNodeId = d.id;
+    sidebarCollapsed = false;
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.add('open');
+    document.getElementById('sidebar-toggle').textContent = '❮';
+
+    const neighbors = links
+      .filter(l => (l.source.id||l.source) === d.id || (l.target.id||l.target) === d.id)
+      .map(l => (l.source.id||l.source) === d.id ? (l.target.id||l.target) : (l.source.id||l.source));
+
+    const godMark = godSet.has(d.id) ? ' <span title="God node">★</span>' : ''; // static HTML only — must never include node data
+
+    document.getElementById('sidebar-content').innerHTML = `
+      <h3>${esc(d.label || d.id)}${godMark}</h3>
+      ${d.type ? `<div class="field">Type: <span>${esc(d.type)}</span></div>` : ''}
+      <div class="field">Community: <span class="badge" style="background:${colorMap[d.community]||'#555'};color:#fff">C${esc(d.community ?? '?')}</span></div>
+      <div class="field">Degree: <span>${esc(d.degree ?? 0)}</span></div>
+      ${d.confidence ? `<div class="field">Confidence: <span class="${CONF_CLASS[d.confidence]||''}">${esc(d.confidence)}</span></div>` : ''}
+      ${d.source_file ? `<div class="field">File: <span style="font-size:10px">${esc(d.source_file)}</span></div>` : ''}
+      ${d.description ? `<div class="field" style="margin-top:8px;color:#ccc;line-height:1.4">${esc(d.description)}</div>` : ''}
+      <div class="neighbors">
+        <div class="field">Connected (${neighbors.length}):</div>
+        ${neighbors.slice(0,20).map(nid => {
+          const n = nodes.find(x => x.id === nid);
+          return `<a class="neighbor-link" data-nid="${esc(nid)}">${esc((n&&n.label)||nid)}</a>`;
+        }).join('')}
+        ${neighbors.length > 20 ? `<div class="field">+${neighbors.length-20} more</div>` : ''}
+      </div>`;
+  }
+
+  closeSidebar = function() {
+    selectedNodeId = null;
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-toggle').textContent = '❯';
+    document.getElementById('sidebar-content').innerHTML = '';
+  }
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebarCollapsed) {
+      sidebarCollapsed = true;
+      sidebar.classList.remove('open');
+      document.getElementById('sidebar-toggle').textContent = '❯';
+    } else {
+      sidebarCollapsed = false;
+      if (selectedNodeId) {
+        sidebar.classList.add('open');
+        document.getElementById('sidebar-toggle').textContent = '❮';
+      }
+    }
+  });
+
+  function focusNode(id) {
+    const d = nodes.find(n => n.id === id);
+    if (!d) return;
+    openSidebar(d);
+    if (d.x == null || isNaN(d.x)) return; // simulation not ready yet — open sidebar but skip pan
+    const svgEl = document.querySelector('#graph svg');
+    const W = svgEl.clientWidth, H = svgEl.clientHeight;
+    const scale = 1.5;
+    const tx = W/2 - scale * d.x;
+    const ty = H/2 - scale * d.y;
+    d3.select('#graph svg').transition().duration(500)
+      .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+  }
+
+  document.getElementById('sidebar-content').addEventListener('click', e => {
+    const link = e.target.closest('.neighbor-link');
+    if (link) focusNode(link.dataset.nid);
+  });
+
+  const legend = document.getElementById('legend');
+  communities.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'legend-item';
+    el.innerHTML = `<div class="legend-dot" style="background:${colorMap[c]}"></div><span>C${c}</span>`;
+    legend.appendChild(el);
+  });
+
+  const pillContainer = document.getElementById('comm-pills');
+  communities.forEach(c => {
+    const pill = document.createElement('span');
+    pill.className = 'comm-pill';
+    pill.textContent = `C${c}`;
+    pill.style.background = colorMap[c] || '#555';
+    pill.style.color = '#fff';
+    pill.dataset.community = c;
+    pill.addEventListener('click', () => {
+      if (hiddenCommunities.has(c)) {
+        hiddenCommunities.delete(c);
+        pill.classList.remove('hidden');
+      } else {
+        hiddenCommunities.add(c);
+        pill.classList.add('hidden');
+      }
+      updateVisibility();
+    });
+    pillContainer.appendChild(pill);
+  });
+
+  document.getElementById('gear-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    filterPanelOpen = !filterPanelOpen;
+    document.getElementById('filter-panel').style.display = filterPanelOpen ? 'block' : 'none';
+  });
+
+  document.addEventListener('click', e => {
+    if (filterPanelOpen && !document.getElementById('filter-panel').contains(e.target)) {
+      filterPanelOpen = false;
+      document.getElementById('filter-panel').style.display = 'none';
+    }
+  });
+
+  const maxDeg = Math.max(...nodes.map(n => n.degree || 1), 1);
+  const r = n => 4 + 14 * Math.sqrt((n.degree || 1) / maxDeg);
+
+  const svg = d3.select('#graph').append('svg')
+    .attr('width', '100%').attr('height', '100%');
+  const g = svg.append('g');
+  const zoom = d3.zoom().scaleExtent([0.1, 8]).on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+
+  const W = window.innerWidth, H = window.innerHeight - 50;
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d=>d.id).distance(80))
+    .force('charge', d3.forceManyBody().strength(-120))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide().radius(d => r(d) + 2));
+
+  const link = g.append('g').selectAll('line').data(links).join('line')
+    .attr('stroke', d => d.confidence === 'EXTRACTED' ? '#555' : d.confidence === 'AMBIGUOUS' ? '#333' : '#444')
+    .attr('stroke-width', d => d.confidence === 'EXTRACTED' ? 1.5 : 1)
+    .attr('stroke-dasharray', d => d.confidence === 'AMBIGUOUS' ? '4,2' : null)
+    .attr('stroke-opacity', 0.6);
+
+  const node = g.append('g').selectAll('circle').data(nodes).join('circle')
+    .attr('r', r)
+    .attr('fill', d => d.degree === 0 ? '#444' : colorMap[d.community])
+    .attr('stroke', d => godSet.has(d.id) ? '#fff' : 'none')
+    .attr('stroke-width', 2)
+    .call(d3.drag()
+      .on('start', (e,d) => { if(!e.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag', (e,d) => { d.fx=e.x; d.fy=e.y; })
+      .on('end', (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }))
+  .on('click', (e, d) => {
+    e.stopPropagation();
+    if (selectedNodeId === d.id) { closeSidebar(); return; }
+    openSidebar(d);
+  });
+
+  const label = g.append('g').selectAll('text').data(nodes).join('text')
+    .text(d => d.label || d.id)
+    .attr('font-size', d => Math.min(10, r(d) * 0.8))
+    .attr('fill', '#ccc').attr('text-anchor', 'middle').attr('dy', d => r(d) + 10)
+    .style('pointer-events', 'none');
+
+  const edgeLabel = g.append('g').selectAll('text').data(links).join('text')
+    .text(d => d.relation || '')
+    .attr('font-size', 8)
+    .attr('fill', '#666')
+    .attr('text-anchor', 'middle')
+    .style('pointer-events', 'none')
+    .attr('opacity', 0);
+
+  updateVisibility = function() {
+    const q = document.getElementById('search').value.toLowerCase();
+
+    node.attr('opacity', d => {
+      if (hiddenCommunities.has(d.community)) return 0;
+      if (q && !(d.label||d.id).toLowerCase().includes(q)) return 0.08;
+      return 1;
+    });
+    label.attr('opacity', d => {
+      if (hiddenCommunities.has(d.community)) return 0;
+      if (q && !(d.label||d.id).toLowerCase().includes(q)) return 0;
+      return 1;
+    });
+
+    link.attr('opacity', d => {
+      const srcId = d.source.id || d.source;
+      const tgtId = d.target.id || d.target;
+      const srcNode = nodes.find(n => n.id === srcId);
+      const tgtNode = nodes.find(n => n.id === tgtId);
+      if (srcNode && hiddenCommunities.has(srcNode.community)) return 0;
+      if (tgtNode && hiddenCommunities.has(tgtNode.community)) return 0;
+      if (d.confidence && hiddenConfidence.has(d.confidence)) return 0;
+      if (q) {
+        const srcMatch = (srcNode&&(srcNode.label||srcId).toLowerCase().includes(q));
+        const tgtMatch = (tgtNode&&(tgtNode.label||tgtId).toLowerCase().includes(q));
+        if (!srcMatch && !tgtMatch) return 0.03;
+      }
+      return 0.6;
+    });
+
+    edgeLabel.attr('opacity', d => {
+      if (!showEdgeLabels) return 0;
+      const srcId = d.source.id || d.source;
+      const tgtId = d.target.id || d.target;
+      const srcNode = nodes.find(n => n.id === srcId);
+      const tgtNode = nodes.find(n => n.id === tgtId);
+      if (srcNode && hiddenCommunities.has(srcNode.community)) return 0;
+      if (tgtNode && hiddenCommunities.has(tgtNode.community)) return 0;
+      if (q) {
+        const srcMatch = srcNode && (srcNode.label||srcId).toLowerCase().includes(q);
+        const tgtMatch = tgtNode && (tgtNode.label||tgtId).toLowerCase().includes(q);
+        if (!srcMatch && !tgtMatch) return 0;
+      }
+      return 0.7;
+    });
+  };
+
+  ['extracted','inferred','ambiguous'].forEach(conf => {
+    document.getElementById('chk-'+conf).addEventListener('change', function() {
+      const key = conf.toUpperCase();
+      if (this.checked) hiddenConfidence.delete(key);
+      else hiddenConfidence.add(key);
+      updateVisibility();
+    });
+  });
+
+  document.getElementById('chk-labels').addEventListener('change', function() {
+    showEdgeLabels = this.checked;
+    updateVisibility();
+  });
+
+  const tip = document.getElementById('tooltip');
+  node.on('mouseover', (e, d) => {
+    tip.style.opacity = 1;
+    tip.innerHTML = `<b>${esc(d.label || d.id)}</b><br>
+      Type: ${esc(d.type || '?')} · Community: ${esc(d.community ?? '?')}<br>
+      Degree: ${esc(d.degree || 0)}${godSet.has(d.id) ? ' ★ God node' : ''}<br>
+      ${d.source_file ? 'File: ' + esc(d.source_file) : ''}`;
+  }).on('mousemove', e => {
+    tip.style.left = (e.pageX + 12) + 'px';
+    tip.style.top = (e.pageY - 10) + 'px';
+  }).on('mouseout', () => { tip.style.opacity = 0; });
+
+  sim.on('tick', () => {
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('cx',d=>d.x).attr('cy',d=>d.y);
+    label.attr('x',d=>d.x).attr('y',d=>d.y);
+    edgeLabel
+      .attr('x', d => ((d.source.x||0) + (d.target.x||0)) / 2)
+      .attr('y', d => ((d.source.y||0) + (d.target.y||0)) / 2);
+  });
+
+  document.getElementById('search').addEventListener('input', updateVisibility);
+});
+</script>
+</body>
+</html>

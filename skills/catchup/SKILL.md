@@ -1,7 +1,9 @@
 ---
 name: catchup
-description: Use when the user starts a session and wants to know what they were working on, says "what was I doing yesterday", "let's start with what we left off", or types /catchup. Presents last sessions as a menu and asks what to load before reading anything.
+description: Use when the user starts a session and wants to know what they were working on, says "what was I doing yesterday", "let's start with what we left off", or types /catchup.
 user_invocable: true
+origin: intern-101
+allowed-tools: [Read, Bash]
 ---
 
 # /catchup — Resume From Last Session
@@ -9,23 +11,7 @@ user_invocable: true
 ## Step 1 — Scan INDEX.md only (no other files yet)
 
 ```bash
-python -c "
-import os, re
-
-idx_path = os.path.join(os.getcwd(), 'chat-contexts', 'INDEX.md')
-if not os.path.isfile(idx_path):
-    print('NONE')
-else:
-    rows = [l for l in open(idx_path, encoding='utf-8').readlines()
-            if l.strip().startswith('|') and '---' not in l and 'Date' not in l and l.strip() != '|']
-    for r in rows[-5:]:
-        m = re.search(r'\`([^`]+\.md)\`', r)
-        title = re.findall(r'\|([^|]+)', r)
-        date = title[1].strip() if len(title) > 1 else ''
-        t = title[2].strip() if len(title) > 2 else ''
-        fname = m.group(1) if m else ''
-        if fname: print(date + ' | ' + t + ' | ' + fname)
-" 2>&1
+python "${CLAUDE_PLUGIN_ROOT}/scripts/catchup.py" 2>&1
 ```
 
 - `NONE` or no output → tell user: "No session history found. Run `/extract-today` first." Stop.

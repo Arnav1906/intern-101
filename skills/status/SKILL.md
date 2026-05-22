@@ -1,7 +1,9 @@
 ---
 name: status
-description: Use when the user wants an overview of all sub-project statuses, asks "what's the state of everything?", "show me project status", or types /status. Reads all _progress.md files and renders a summary table.
+description: Use when the user wants an overview of all sub-project statuses, asks "what's the state of everything?", "show me project status", or types /status.
 user_invocable: true
+origin: intern-101
+allowed-tools: [Read, Bash]
 ---
 
 # /status — Sub-Project Status Overview
@@ -9,34 +11,7 @@ user_invocable: true
 ## Step 1 — Find all progress files
 
 ```bash
-python -c "
-import os, glob, re, json
-
-projects_dir = os.path.join(os.getcwd(), 'projects')
-if not os.path.isdir(projects_dir):
-    print('NONE')
-    exit(0)
-
-results = []
-for f in sorted(glob.glob(os.path.join(projects_dir, '*', '*_progress.md'))):
-    txt = open(f, encoding='utf-8').read()
-    name = os.path.basename(os.path.dirname(f))
-    status_m = re.search(r'## Status:\s*(.+)', txt)
-    status = status_m.group(1).strip() if status_m else 'UNKNOWN'
-    pending = re.findall(r'- \[ \] (.+)', txt)
-    done = re.findall(r'- \[x\] (.+)', txt, re.IGNORECASE)
-    gotcha_m = re.search(r'## Key Gotcha\n(.+?)(?=\n## |\Z)', txt, re.DOTALL)
-    gotcha = gotcha_m.group(1).strip()[:120] if gotcha_m else ''
-    results.append({
-        'name': name, 'status': status,
-        'done': len(done), 'pending': len(pending),
-        'next': pending[0].strip() if pending else '',
-        'gotcha': gotcha,
-        'file': f
-    })
-
-print(json.dumps(results))
-" 2>&1
+python "${CLAUDE_PLUGIN_ROOT}/scripts/status.py" 2>&1
 ```
 
 - `NONE` → "No `projects/` directory found. Run `project-index-manager` to set up sub-projects."

@@ -1,7 +1,9 @@
 ---
 name: daily-update
-description: Use when the user wants to generate a daily status update for their supervisor, says "write my daily update", "what did I do today", or types /daily-update. Auto-sources from today's chat-context files when no notes are provided, and rephrases technical jargon into plain language.
+description: Use when the user wants to generate a daily status update for their supervisor, says "write my daily update", "what did I do today", or types /daily-update.
 user_invocable: true
+origin: intern-101
+allowed-tools: [Read, Write, Bash]
 ---
 
 # /daily-update — Daily Status Update
@@ -24,24 +26,10 @@ If `{{ arguments }}` is non-empty, skip to the **Format Step**.
 ### Step 1 — Find today's chat-context files
 
 ```bash
-python -c "
-import os, glob
-from datetime import datetime, timedelta
-
-arg = '{{ arguments }}'.strip().lower()
-if arg == '--yesterday':
-    target_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-else:
-    target_date = datetime.now().strftime('%Y-%m-%d')
-ctx_dir = os.path.join(os.getcwd(), 'chat-contexts')
-if not os.path.isdir(ctx_dir):
-    print('NONE')
-else:
-    results = [f for f in sorted(glob.glob(os.path.join(ctx_dir, '*.md')))
-               if os.path.basename(f).startswith(target_date) and os.path.basename(f) != 'INDEX.md']
-    print('\n'.join(results) if results else 'NONE')
-" 2>&1
+python "${CLAUDE_PLUGIN_ROOT}/scripts/daily_update.py" 2>&1
 ```
+
+(Pass `--yesterday` if the `{{ arguments }}` flag is set.)
 
 - `NONE` → tell user: "No chat-context files found for today. Run `/extract-today` first, or paste your notes directly." Stop.
 
@@ -61,25 +49,7 @@ Read these to generate your daily update? (yes / enter numbers to skip)
 
 ### Step 3 — Extract summaries only
 
-For each confirmed file, extract only `## Summary`, `## Key Topics`, and `## Key Decisions & Findings` sections:
-
-```bash
-python -c "
-import re, os
-
-files = [r'FILE1', r'FILE2']
-out = []
-for f in files:
-    txt = open(f, encoding='utf-8').read()
-    m = re.search(r'^# (.+)$', txt, re.MULTILINE)
-    out.append('=== ' + (m.group(1) if m else f) + ' ===')
-    for sec in ['## Summary', '## Key Topics', '## Key Decisions & Findings']:
-        m2 = re.search(re.escape(sec) + r'\n(.*?)(?=\n## |\Z)', txt, re.DOTALL)
-        if m2: out.append(sec + '\n' + m2.group(1).strip())
-    out.append('')
-print('\n'.join(out))
-" 2>&1
-```
+The script output from Step 1 already includes the extracted `## Summary`, `## Key Topics`, and `## Key Decisions & Findings` sections from each file. Use that output directly.
 
 ### Step 4 — Ask for name if unknown
 

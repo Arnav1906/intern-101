@@ -1,0 +1,9 @@
+{
+  "hooks": [
+    {
+      "event": "Stop",
+      "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-extract-prompt.sh\"",
+      "description": "Reminds user to run /extract-today if no sessions were extracted today"
+    }
+  ]
+}

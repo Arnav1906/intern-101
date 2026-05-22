@@ -1,19 +1,36 @@
 {
   "name": "intern-101",
-  "description": "Session management and project organization skills for Claude Code — daily updates, context extraction, project indexing, and session catchup.",
-  "version": "1.1.0",
+  "description": "Session management, project organization, and knowledge graph visualization for Claude Code — daily updates, context extraction, project indexing, session catchup, and architecture mapping.",
+  "version": "3.0.0",
   "author": {
     "name": "Arnav Bhalla"
   },
   "license": "MIT",
-  "keywords": ["productivity", "session-management", "daily-update", "project-organization", "context"],
+  "keywords": ["productivity", "session-management", "daily-update", "project-organization", "context", "knowledge-graph", "visualization", "architecture"],
   "skills": [
-    "./skills/project-index-manager",
-    "./skills/chat-context-extractor",
-    "./skills/catchup",
-    "./skills/extract-today",
-    "./skills/daily-update",
-    "./skills/recall",
-    "./skills/status"
-  ]
+    "./skills/intern/",
+    "./skills/catchup/",
+    "./skills/daily-update/",
+    "./skills/extract-today/",
+    "./skills/project-index-manager/",
+    "./skills/recall/",
+    "./skills/status/",
+    "./skills/wrap-up/",
+    "./plugins/visualise/skills/visualise/",
+    "./plugins/visualise/skills/visualise-search/",
+    "./plugins/visualise/skills/visualise-gaps/",
+    "./plugins/visualise/skills/visualise-history/",
+    "./plugins/visualise/skills/visualise-diff/"
+  ],
+  "agents": [
+    "./agents/graph-analyst.md",
+    "./agents/session-manager.md"
+  ],
+  "rules": [
+    "./rules/output-format.md",
+    "./rules/file-boundaries.md",
+    "./rules/graph-conventions.md"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "scripts": "./scripts/"
 }
