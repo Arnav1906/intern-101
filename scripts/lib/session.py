@@ -66,7 +66,7 @@ def list_todays_jsonl(claude_dir: Path, cwd: Path) -> list[Path]:
         # project dir name is the cwd with path separators replaced by hyphens
         dir_name = project_dir.name
         # normalize both sides for comparison
-        normalized_cwd = (cwd_str.replace("\\", "/").replace(":", "").replace("/", "-")
+        normalized_cwd = (cwd_str.replace("\\", "/").replace(":", "-").replace("/", "-")
                           .replace("'", "").replace(" ", "-").lstrip("-"))
         if normalized_cwd.lower() not in dir_name.lower():
             continue
