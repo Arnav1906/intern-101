@@ -45,6 +45,7 @@ Examples that work:
 |---|---|
 | `/catchup` | Shows last 5 sessions, asks what to load, delivers a "where you left off" summary |
 | `/extract-today` | Finds all new sessions from today not yet saved, confirms, batch-extracts them |
+| `chat-context-extractor` | Extracts a single `.jsonl` session into a structured markdown context doc. Auto-locates the latest session if no path given. Use when you want to extract one specific session rather than today's batch. |
 | `/daily-update` | Reads today's extracted sessions and generates a 5–7 point plain-language update for your supervisor |
 | `/recall <query>` | Searches past session titles and summaries for a keyword, returns matching sessions with snippets |
 | `/status` | Shows all sub-projects' current status, pending items, and next actions in one table |
@@ -159,6 +160,7 @@ intern-101/
   skills/
     intern/              ← dispatcher: routes all natural language to the right skill
     catchup/
+    chat-context-extractor/  ← single-session extractor (used by extract-today internally)
     daily-update/
     extract-today/
     project-index-manager/
