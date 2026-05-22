@@ -31,6 +31,5 @@
     "./rules/file-boundaries.md",
     "./rules/graph-conventions.md"
   ],
-  "hooks": "./hooks/hooks.json",
   "scripts": "./scripts/"
 }
