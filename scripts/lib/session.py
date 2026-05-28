@@ -67,7 +67,7 @@ def list_todays_jsonl(claude_dir: Path, cwd: Path) -> list[Path]:
         dir_name = project_dir.name
         # normalize both sides for comparison
         normalized_cwd = (cwd_str.replace("\\", "/").replace(":", "-").replace("/", "-")
-                          .replace("'", "").replace(" ", "-").lstrip("-"))
+                          .replace("'", "").replace(" ", "-").replace("_", "-").lstrip("-"))
         if normalized_cwd.lower() not in dir_name.lower():
             continue
         for jsonl in project_dir.glob("*.jsonl"):

@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from datetime import datetime
 
-sys.path.insert(0, str(Path(__file__).parent / 'lib'))
+sys.path.insert(0, str(Path(__file__).parent))
 
 from lib.utils import get_chat_contexts_dir, ensure_dir, write_file, now_str
 from lib.session import slugify

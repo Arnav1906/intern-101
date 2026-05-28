@@ -10,6 +10,7 @@
   "skills": [
     "./skills/intern/",
     "./skills/catchup/",
+    "./skills/chat-context-extractor/",
     "./skills/daily-update/",
     "./skills/extract-today/",
     "./skills/project-index-manager/",
@@ -23,6 +24,7 @@
     "./plugins/visualise/skills/visualise-diff/"
   ],
   "agents": [
+    "./agents/chat-context-extractor.md",
     "./agents/graph-analyst.md",
     "./agents/session-manager.md"
   ],

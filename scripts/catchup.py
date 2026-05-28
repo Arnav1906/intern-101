@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent / 'lib'))
+sys.path.insert(0, str(Path(__file__).parent))
 
 from lib.utils import get_chat_contexts_dir
 from lib.session import parse_index_rows

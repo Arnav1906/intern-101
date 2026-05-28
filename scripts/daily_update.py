@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from datetime import datetime, timedelta
 
-sys.path.insert(0, str(Path(__file__).parent / 'lib'))
+sys.path.insert(0, str(Path(__file__).parent))
 
 from lib.utils import get_chat_contexts_dir
 
