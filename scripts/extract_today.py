@@ -1,18 +1,15 @@
-"""Find today's new Claude Code sessions and optionally extract them."""
+"""Find today's new Claude Code sessions."""
 
 import sys
 import json
 import argparse
 import re
-import glob
-import subprocess
 from pathlib import Path
 from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent))
-
 from lib.utils import get_chat_contexts_dir, get_claude_dir
-from lib.session import list_todays_jsonl, list_todays_extracted
+from lib.session import list_todays_jsonl
 
 
 def _get_known_session_ids(ctx_dir: Path) -> set:
@@ -31,8 +28,9 @@ def _get_known_session_ids(ctx_dir: Path) -> set:
     return known
 
 
-def scan_mode(cwd: Path) -> None:
+def main():
     claude_dir = get_claude_dir()
+    cwd = Path.cwd()
     ctx_dir = get_chat_contexts_dir(cwd)
     known_ids = _get_known_session_ids(ctx_dir)
 
@@ -53,32 +51,6 @@ def scan_mode(cwd: Path) -> None:
 
     results.sort(key=lambda x: x["mtime"])
     print(json.dumps(results))
-
-
-def run_mode(jsonl_path: str, cwd: Path) -> None:
-    script = Path(__file__).parent / "chat_context_extractor.py"
-    ctx_dir = get_chat_contexts_dir(cwd)
-    result = subprocess.run(
-        [sys.executable, str(script), jsonl_path, "--output-dir", str(ctx_dir)],
-        capture_output=True, text=True
-    )
-    if result.stdout.strip():
-        print(result.stdout.strip())
-    if result.stderr.strip():
-        print(result.stderr.strip(), file=sys.stderr)
-    sys.exit(result.returncode)
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--run", metavar="JSONL_PATH", help="extract a specific session file")
-    args = parser.parse_args()
-
-    cwd = Path.cwd()
-    if args.run:
-        run_mode(args.run, cwd)
-    else:
-        scan_mode(cwd)
 
 
 if __name__ == "__main__":
