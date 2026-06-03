@@ -4,6 +4,7 @@ description: Main dispatcher for intern-101. Use when the user types /intern or 
 origin: intern-101
 user-invocable: true
 allowed-tools: [Read, Bash]
+model: haiku
 ---
 
 # /intern — Dispatcher

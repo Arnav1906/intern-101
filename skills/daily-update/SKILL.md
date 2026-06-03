@@ -4,6 +4,7 @@ description: Use when the user wants to generate a daily status update for their
 user_invocable: true
 origin: intern-101
 allowed-tools: [Read, Write, Bash]
+model: haiku
 ---
 
 # /daily-update — Daily Status Update

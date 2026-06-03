@@ -1,14 +1,15 @@
 ---
 name: wrap-up
-description: Use when the user says they are done for the day — "I'm done", "wrapping up", "done for today", "signing off", "that's it for today", "I'm finished", "end of day". Checks git status, prompts to commit if needed, then runs session extraction. Fully self-contained, no external skill dependencies.
+description: Use when the user says they are done for the day — "I'm done", "wrapping up", "done for today", "signing off", "that's it for today", "I'm finished", "end of day". Checks git status, prompts to commit if needed, then runs session extraction.
 origin: intern-101
 user-invocable: true
+model: sonnet
 allowed-tools: [Read, Bash]
 ---
 
 # /wrap-up — End-of-Day Wrap-Up
 
-Checks git status, optionally commits, then extracts today's sessions. Fully self-contained — no external skills or plugins.
+Checks git status, optionally commits, then hands off to `/extract-today` for session extraction.
 
 ---
 
@@ -17,8 +18,6 @@ Checks git status, optionally commits, then extracts today's sessions. Fully sel
 ```bash
 python "${CLAUDE_PLUGIN_ROOT}/scripts/wrap_up.py" --check
 ```
-
-Read the output:
 
 - `NO_REPO` → skip to Step 3
 - `CLEAN` → skip to Step 3
@@ -57,14 +56,12 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/wrap_up.py" --diff-stat
 Show the output (changed files summary). Then:
 
 1. Ask: "Commit message? (or press enter to use: `chore: end-of-day checkpoint`)"
-2. Use the provided message, or the default if the user pressed enter without typing
+2. Use the provided message, or the default if blank.
 3. Run:
 
 ```bash
 python "${CLAUDE_PLUGIN_ROOT}/scripts/wrap_up.py" --commit "<message>"
 ```
-
-Read the output:
 
 - Starts with `COMMITTED:<hash>` → confirm: "Committed `<hash>`." → proceed to Step 3
 - Starts with `FAILED:<reason>` → show the error. Ask: "Fix and retry, or skip commit and extract anyway? [retry/skip]"
@@ -75,21 +72,4 @@ Read the output:
 
 ## Step 3 — Extract today's sessions
 
-```bash
-python "${CLAUDE_PLUGIN_ROOT}/scripts/extract_today.py"
-```
-
-Wait for completion. Then say:
-
-```
-Sessions saved. Have a good one! 👋
-```
-
----
-
-## Important Constraints
-
-- This skill NEVER calls `/sc:git` or any external plugin or skill.
-- Git operations are handled entirely by `scripts/wrap_up.py`.
-- Session extraction is handled entirely by `scripts/extract_today.py`.
-- Both scripts live in the same plugin directory (`${CLAUDE_PLUGIN_ROOT}/scripts/`).
+Run `/extract-today` to save today's sessions with agent-generated summaries.

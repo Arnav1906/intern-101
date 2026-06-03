@@ -3,30 +3,33 @@ name: recall
 description: Use when the user wants to find past sessions related to a topic, asks "did we work on X before?", "find sessions about Y", or types /recall <query>.
 user_invocable: true
 origin: intern-101
+model: haiku
 allowed-tools: [Read, Bash]
 ---
 
 # /recall — Find Past Sessions
 
-## Step 1 — Show 5 most recent sessions (always)
+## Step 1 — Show all sessions
 
 ```bash
 python "${CLAUDE_PLUGIN_ROOT}/scripts/recall.py" 2>&1
 ```
 
 - `NONE` → "No session history yet. Run `/extract-today` first." Stop.
-- Lines returned → display as numbered list:
+- Lines returned → display as a numbered list, newest first:
 
 ```
-Recent sessions:
+All sessions (N):
   1. YYYY-MM-DD — <Title>
+               <one-line summary>
   2. YYYY-MM-DD — <Title>
+               <one-line summary>
   ...
 ```
 
-If `{{ arguments }}` is non-empty, proceed to Step 2 (search). Otherwise ask: "Open one (enter number), or type a search term."
+If `{{ arguments }}` is non-empty, proceed directly to Step 2. Otherwise ask: "Open one (enter number), or type a search term."
 
-**Wait for answer.** If user enters a number → jump to Step 4. If user enters text → treat as query and run Step 2.
+**Wait for answer.** Number entered → Step 4. Text entered → Step 2.
 
 ## Step 2 — Search INDEX.md titles
 
@@ -39,13 +42,11 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/recall.py" --query "{{ arguments }}" 2>&1
 
 ## Step 3 — Present search matches
 
-Show matched rows as a numbered list (continuing from Step 1 numbering if helpful):
-
 ```
 Found N session(s) matching "{{ arguments }}":
 
   1. YYYY-MM-DD — <Title>  [<filename>]
-  2. YYYY-MM-DD — <Title>  [<filename>]
+               <one-line summary>
 ```
 
 Ask: "Open one (enter number), or 'search content' to grep file bodies."
@@ -54,7 +55,7 @@ Ask: "Open one (enter number), or 'search content' to grep file bodies."
 
 ## Step 4 — Load chosen session or expand search
 
-**If number entered:** Read that `chat-contexts/<filename>`, present `## Summary` and `## Key Decisions & Findings`. Offer to load full file.
+**If number entered:** Read `chat-contexts/<filename>`, present `## Summary` and `## Key Decisions & Findings`. Offer to load full file.
 
 **If "search content":**
 
@@ -66,6 +67,5 @@ Show results numbered. Ask which to open.
 
 ## Notes
 
-- Step 1 always runs — recent sessions shown even with no query.
-- Only reads from `chat-contexts/` — never raw `.jsonl` files.
+- Always reads from `INDEX.md` — never raw `.jsonl` files.
 - Case-insensitive throughout.

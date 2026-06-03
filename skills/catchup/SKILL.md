@@ -4,6 +4,7 @@ description: Use when the user starts a session and wants to know what they were
 user_invocable: true
 origin: intern-101
 allowed-tools: [Read, Bash]
+model: haiku
 ---
 
 # /catchup — Resume From Last Session

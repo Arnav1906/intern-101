@@ -4,6 +4,7 @@ description: Use when the user wants to search the knowledge graph by descriptio
 user_invocable: true
 origin: intern-101
 allowed-tools: [Read, Bash]
+model: opus
 ---
 
 # /visualise-search — Semantic Node Search

@@ -4,6 +4,7 @@ description: Use when the user wants an overview of all sub-project statuses, as
 user_invocable: true
 origin: intern-101
 allowed-tools: [Read, Bash]
+model: haiku
 ---
 
 # /status — Sub-Project Status Overview

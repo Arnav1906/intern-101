@@ -3,6 +3,7 @@ name: project-index-manager
 description: Use when a project directory has scattered files across multiple work domains with no clear organization, when starting a multi-domain project, or when a user asks to set up project indexes, progress files, or a routing index. Also use when updating _Index.md or _progress.md after completing work on a sub-project.
 origin: intern-101
 allowed-tools: [Read, Write, Edit, Bash]
+model: sonnet
 ---
 
 # Project Index Manager
