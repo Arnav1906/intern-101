@@ -17,13 +17,14 @@ def parse_index_rows(index_path: Path) -> list[dict]:
         if len(cells) < 3:
             continue
         date, title, filename = cells[0], cells[1], cells[2]
+        summary = cells[3] if len(cells) > 3 else ""
         # skip header and separator rows
         if not date or set(date) <= {"-", " "}:
             continue
         if not re.match(r"\d{4}-\d{2}-\d{2}", date):
             continue
         filename = filename.strip("`").strip()
-        rows.append({"date": date, "title": title, "filename": filename})
+        rows.append({"date": date, "title": title, "filename": filename, "summary": summary})
     return rows
 
 
