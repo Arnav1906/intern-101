@@ -2,6 +2,7 @@
 name: chat-context-extractor
 description: Reads a Claude Code .jsonl session transcript and produces a structured, searchable markdown context document. When no path is given, auto-locates the most recent session from ~/.claude/projects/ for the current working directory. Works on Windows, macOS, and Linux.
 user_invocable: true
+model: sonnet
 ---
 
 # Chat Context Extractor

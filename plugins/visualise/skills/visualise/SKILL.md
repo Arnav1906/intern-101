@@ -4,6 +4,7 @@ description: Use when the user wants to build a knowledge graph from any project
 user_invocable: true
 origin: intern-101
 allowed-tools: [Read, Write, Bash]
+model: opus
 ---
 
 # /visualise — Build Knowledge Graph

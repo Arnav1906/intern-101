@@ -4,6 +4,7 @@ description: Use when the user wants to compare codebase architecture between tw
 user_invocable: true
 origin: intern-101
 allowed-tools: [Read, Write, Bash]
+model: opus
 ---
 
 # /visualise-diff — Architecture Diff

@@ -4,6 +4,7 @@ description: Use when the user wants to see how codebase architecture evolved ov
 user_invocable: true
 origin: intern-101
 allowed-tools: [Read, Write, Bash]
+model: opus
 ---
 
 # /visualise-history — Temporal Architecture History

@@ -4,6 +4,7 @@ description: Use when the user wants to find undocumented or disconnected parts 
 user_invocable: true
 origin: intern-101
 allowed-tools: [Read, Write, Bash]
+model: opus
 ---
 
 # /visualise-gaps — Knowledge Gap Analysis & Auto-Fill
