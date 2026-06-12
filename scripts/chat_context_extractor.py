@@ -120,7 +120,7 @@ def main():
         sys.exit(1)
 
     title = _generate_title(_first_user_message(turns))
-    date = datetime.now().strftime("%Y-%m-%d")
+    date = datetime.fromtimestamp(jsonl_path.stat().st_mtime).strftime("%Y-%m-%d")
     files = _files_modified(turns)
     tags = _extract_tags(title, files)
     transcript = _build_transcript(turns)
