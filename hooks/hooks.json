@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-extract-prompt.sh\""
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/stop_extract_prompt.py\""
           }
         ]
       }
