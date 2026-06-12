@@ -20,8 +20,11 @@ IMG_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'}
 
 def _file_hash(path: Path) -> str:
     try:
+        h = hashlib.sha256()
         with path.open('rb') as fh:
-            return hashlib.sha256(fh.read(65536)).hexdigest()
+            while chunk := fh.read(65536):
+                h.update(chunk)
+        return h.hexdigest()
     except OSError:
         return ""
 
@@ -142,12 +145,15 @@ def extract_code_file(rel: str, target: Path) -> dict:
                 'edges': []}
 
 
-def merge_extractions(cache_dir: Path) -> dict:
+def merge_extractions(cache_dir: Path, current_files: set) -> dict:
     all_nodes, all_edges = [], []
     seen_ids: set = set()
     for f in cache_dir.glob('ast_*.json'):
         try:
             d = json.loads(f.read_text(encoding='utf-8'))
+            if d.get('source_file', '') not in current_files:
+                f.unlink()
+                continue
             for n in d.get('nodes', []):
                 if n['id'] not in seen_ids:
                     seen_ids.add(n['id'])
@@ -219,7 +225,8 @@ def main():
         extracted = extract_code_file(rel, target)
         cache_path.write_text(json.dumps(extracted, indent=2), encoding='utf-8')
 
-    merged = merge_extractions(cache_dir)
+    current_files = set(results['code'])
+    merged = merge_extractions(cache_dir, current_files)
     (out_dir / '.ast_merged.json').write_text(json.dumps(merged, indent=2), encoding='utf-8')
     print(f"AST extraction: {len(merged['nodes'])} nodes, {len(merged['edges'])} edges from code files")
 
