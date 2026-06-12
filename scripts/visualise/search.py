@@ -7,7 +7,7 @@ import re
 import argparse
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from lib.graph import load_graph, get_neighbors, get_node
 

@@ -4,9 +4,9 @@ import json
 import re
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
-from utils import get_plugin_root, ensure_dir
-from graph import load_graph, get_isolated_nodes, graph_stats
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from lib.utils import get_plugin_root, ensure_dir
+from lib.graph import load_graph, get_isolated_nodes, graph_stats
 
 
 def main():

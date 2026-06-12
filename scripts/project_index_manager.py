@@ -3,8 +3,8 @@ import sys
 import os
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent / 'lib'))
-from utils import get_plugin_root, ensure_dir
+sys.path.insert(0, str(Path(__file__).parent))
+from lib.utils import get_plugin_root, ensure_dir
 
 FIND_PROJECT_DIR_SRC = '''\
 import os, sys
