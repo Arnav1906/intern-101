@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Remind the user to extract today's sessions if they haven't already."""
-import sys
 from datetime import datetime
 from pathlib import Path
 

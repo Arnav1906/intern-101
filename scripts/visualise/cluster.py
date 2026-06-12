@@ -31,9 +31,12 @@ def main():
     try:
         import networkx as nx
     except ImportError:
-        import subprocess
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'networkx==3.3', '-q'])
-        import networkx as nx
+        print(
+            "ERROR: networkx not installed.\n"
+            "Run: pip install networkx==3.3 python-louvain==0.16",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     # merge nodes (deduplicate by id)
     all_nodes: dict = {}

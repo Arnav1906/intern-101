@@ -98,10 +98,10 @@ def _extract_sql(rel: str, content: str) -> dict:
     for caller in procs:
         for callee in calls:
             edges.append({'source': caller, 'target': callee, 'relation': 'calls',
-                          'confidence': 'EXTRACTED', 'confidence_score': 1.0})
+                          'confidence': 'INFERRED', 'confidence_score': 0.75})
         for table in accessed:
             edges.append({'source': caller, 'target': table, 'relation': 'accesses',
-                          'confidence': 'EXTRACTED', 'confidence_score': 1.0})
+                          'confidence': 'INFERRED', 'confidence_score': 0.75})
     return {'source_file': rel, 'nodes': nodes, 'edges': edges}
 
 
@@ -168,13 +168,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("target", nargs="?", default="", help="target directory (default: cwd)")
     parser.add_argument("--update", action="store_true")
+    parser.add_argument("--no-viz", action="store_true")
+    parser.add_argument("--cluster-only", action="store_true")
     args = parser.parse_args()
 
     cwd = Path.cwd()
     raw_target = args.target.strip()
-    # remove known flags that might have been passed through
-    for flag in ['--update', '--no-viz', '--cluster-only']:
-        raw_target = raw_target.replace(flag, '').strip()
 
     target = (cwd / raw_target).resolve() if raw_target else cwd.resolve()
 

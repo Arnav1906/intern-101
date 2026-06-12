@@ -85,7 +85,8 @@ def _extract_quick(cwd: Path, sha: str, files: list) -> tuple[dict, list]:
             for m in re.finditer(r'^(?:import|from)\s+([\w.]+)', content, re.MULTILINE):
                 imp_id = m.group(1).replace('.', '_')
                 nodes.setdefault(imp_id, {'id': imp_id, 'label': m.group(1)})
-                edges.append({'source': node_id, 'target': imp_id, 'relation': 'imports'})
+                edges.append({'source': node_id, 'target': imp_id, 'relation': 'imports',
+                              'confidence': 'INFERRED', 'confidence_score': 0.75})
         elif ext == '.sql':
             procs = re.findall(r'CREATE\s+(?:OR\s+REPLACE\s+)?(?:PROCEDURE|FUNCTION)\s+(\w+)', content, re.IGNORECASE)
             calls = re.findall(r'(?:EXEC|EXECUTE|CALL)\s+(\w+)', content, re.IGNORECASE)
@@ -93,7 +94,8 @@ def _extract_quick(cwd: Path, sha: str, files: list) -> tuple[dict, list]:
                 nodes[p] = {'id': p, 'label': p, 'type': 'procedure'}
             for p in procs:
                 for c in calls:
-                    edges.append({'source': p, 'target': c, 'relation': 'calls'})
+                    edges.append({'source': p, 'target': c, 'relation': 'calls',
+                                  'confidence': 'INFERRED', 'confidence_score': 0.75})
     return nodes, edges
 
 
