@@ -26,10 +26,8 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/visualise/extract.py" "{{ arguments }}" 2>
 ```
 
 - If `BOUNDARY_ERROR:...` → "Path `<path>` is outside the current working directory. Only subdirectories of the current project are allowed." Stop.
-- If `EXISTS:False` → "Directory not found: `<path>`. Check the path." Stop.
-- Note the TARGET path and flags for all subsequent steps.
-- `CLUSTER_ONLY:True` → skip to Step 5 (re-cluster existing graph).
-- `UPDATE:True` → in Step 3, only extract files changed since last run.
+- If `NOTFOUND:...` → "Directory not found: `<path>`. Check the path." Stop.
+- Note the `TARGET:` path for all subsequent steps.
 
 ---
 
@@ -43,54 +41,13 @@ File detection and dependency checks are handled by `extract.py` in Step 1. The 
 
 ---
 
-## Step 3 — Extract structure (code AST + SQL)
+## Step 3 — Structure extraction complete
 
-For code files, extract structural relationships deterministically (no LLM needed).
+`extract.py` (Step 1) has already extracted AST nodes and edges from all code files. The results are in:
+- `visualise-out/cache/ast_*.json` — per-file extractions
+- `visualise-out/.ast_merged.json` — merged nodes and edges
 
-**3A — For Python files** (use Python ast module):
-
-For each `.py` file in the detected list, identify:
-- Module name (from file path)
-- `import X` and `from X import Y` → edge: `module → X` (type: `imports`, confidence: EXTRACTED, score: 1.0)
-- Class definitions → node (type: `class`)
-- Function definitions at module level → node (type: `function`)
-- Class method definitions → edge: `class → method` (type: `contains`, confidence: EXTRACTED, score: 1.0)
-
-Run this extraction yourself by reading each Python file and parsing its structure. Output in the format below.
-
-**3B — For SQL files** (use regex-based extraction):
-
-For each `.sql` file, identify:
-- `CREATE PROCEDURE/FUNCTION <name>` → node (type: `procedure`)
-- `EXEC/EXECUTE/CALL <name>` within a procedure body → edge: `caller → callee` (type: `calls`, confidence: EXTRACTED, score: 1.0)
-- `FROM <table>`, `JOIN <table>`, `INSERT INTO <table>`, `UPDATE <table>` → edge: `procedure → table` (type: `accesses`, confidence: EXTRACTED, score: 1.0)
-- `CREATE TABLE <name>` → node (type: `table`)
-
-**3C — For JS/TS files** (use regex-based extraction):
-
-- `import ... from '<module>'` → edge: `file → module` (type: `imports`, confidence: EXTRACTED, score: 1.0)
-- `require('<module>')` → same
-- `function <name>` / `const <name> = ` / `class <name>` → node
-
-**3D — For all other code files:**
-
-Read the file and identify major named entities (functions, classes, constants) and any explicit references between them. Use judgment about what relationships are structurally certain (EXTRACTED) vs. inferred (INFERRED).
-
-**Output format** — write to `visualise-out/cache/ast_<hash>.json` for each file (where `<hash>` is the first 8 chars of the file's md5 from Step 2):
-
-```json
-{
-  "source_file": "relative/path/to/file.py",
-  "nodes": [
-    {"id": "unique_snake_case_id", "label": "HumanReadableName", "type": "module|class|function|procedure|table|constant", "source_location": "L1-L50 or null"}
-  ],
-  "edges": [
-    {"source": "node_id_a", "target": "node_id_b", "relation": "imports|calls|contains|accesses|extends|implements", "confidence": "EXTRACTED", "confidence_score": 1.0}
-  ]
-}
-```
-
-The `extract.py` script (Step 1) already merges all `ast_*.json` files into `visualise-out/.ast_merged.json` and prints the node/edge counts.
+The node and edge counts were printed by Step 1. Proceed directly to Step 4.
 
 ---
 

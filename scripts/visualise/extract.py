@@ -20,8 +20,11 @@ IMG_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'}
 
 def _file_hash(path: Path) -> str:
     try:
+        h = hashlib.sha256()
         with path.open('rb') as fh:
-            return hashlib.sha256(fh.read(65536)).hexdigest()
+            while chunk := fh.read(65536):
+                h.update(chunk)
+        return h.hexdigest()
     except OSError:
         return ""
 
@@ -95,10 +98,10 @@ def _extract_sql(rel: str, content: str) -> dict:
     for caller in procs:
         for callee in calls:
             edges.append({'source': caller, 'target': callee, 'relation': 'calls',
-                          'confidence': 'EXTRACTED', 'confidence_score': 1.0})
+                          'confidence': 'INFERRED', 'confidence_score': 0.75})
         for table in accessed:
             edges.append({'source': caller, 'target': table, 'relation': 'accesses',
-                          'confidence': 'EXTRACTED', 'confidence_score': 1.0})
+                          'confidence': 'INFERRED', 'confidence_score': 0.75})
     return {'source_file': rel, 'nodes': nodes, 'edges': edges}
 
 
@@ -142,12 +145,15 @@ def extract_code_file(rel: str, target: Path) -> dict:
                 'edges': []}
 
 
-def merge_extractions(cache_dir: Path) -> dict:
+def merge_extractions(cache_dir: Path, current_files: set) -> dict:
     all_nodes, all_edges = [], []
     seen_ids: set = set()
     for f in cache_dir.glob('ast_*.json'):
         try:
             d = json.loads(f.read_text(encoding='utf-8'))
+            if d.get('source_file', '') not in current_files:
+                f.unlink()
+                continue
             for n in d.get('nodes', []):
                 if n['id'] not in seen_ids:
                     seen_ids.add(n['id'])
@@ -162,13 +168,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("target", nargs="?", default="", help="target directory (default: cwd)")
     parser.add_argument("--update", action="store_true")
+    parser.add_argument("--no-viz", action="store_true")
+    parser.add_argument("--cluster-only", action="store_true")
     args = parser.parse_args()
 
     cwd = Path.cwd()
     raw_target = args.target.strip()
-    # remove known flags that might have been passed through
-    for flag in ['--update', '--no-viz', '--cluster-only']:
-        raw_target = raw_target.replace(flag, '').strip()
 
     target = (cwd / raw_target).resolve() if raw_target else cwd.resolve()
 
@@ -219,7 +224,8 @@ def main():
         extracted = extract_code_file(rel, target)
         cache_path.write_text(json.dumps(extracted, indent=2), encoding='utf-8')
 
-    merged = merge_extractions(cache_dir)
+    current_files = set(results['code'])
+    merged = merge_extractions(cache_dir, current_files)
     (out_dir / '.ast_merged.json').write_text(json.dumps(merged, indent=2), encoding='utf-8')
     print(f"AST extraction: {len(merged['nodes'])} nodes, {len(merged['edges'])} edges from code files")
 

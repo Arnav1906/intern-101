@@ -1,6 +1,7 @@
 """Step 6-7 of /visualise: copy graph-template.html → visualise-out/graph.html (template is verbatim, loads graph.json at runtime)."""
 
 import sys
+import os
 import argparse
 import shutil
 from pathlib import Path
@@ -14,11 +15,11 @@ TEMPLATE_RELATIVE = Path("plugins") / "visualise" / "assets" / "graph-template.h
 def _find_template(cwd: Path) -> Path | None:
     # try plugin root env var first, then search from cwd upward
     plugin_root = Path(
-        __import__("os").environ.get("CLAUDE_PLUGIN_ROOT", "")
-    ).resolve() if __import__("os").environ.get("CLAUDE_PLUGIN_ROOT") else None
+        os.environ.get("CLAUDE_PLUGIN_ROOT", "")
+    ).resolve() if os.environ.get("CLAUDE_PLUGIN_ROOT") else None
 
-    if plugin_root and (plugin_root / "assets" / "graph-template.html").exists():
-        return plugin_root / "assets" / "graph-template.html"
+    if plugin_root and (plugin_root / "plugins" / "visualise" / "assets" / "graph-template.html").exists():
+        return plugin_root / "plugins" / "visualise" / "assets" / "graph-template.html"
 
     # try relative to this script's grandparent (plugin root)
     script_plugin_root = Path(__file__).resolve().parent.parent.parent

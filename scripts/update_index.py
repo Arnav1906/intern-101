@@ -18,14 +18,16 @@ def main():
 
     ctx_dir = get_chat_contexts_dir(Path.cwd())
     idx_path = ctx_dir / "INDEX.md"
-    row = f"| {args.date} | {args.title[:60]} | `{args.filename}` | {args.summary[:120]} |"
+    title = args.title[:60].replace("|", "-")
+    summary = args.summary[:120].replace("|", "-")
+    row = f"| {args.date} | {title} | `{args.filename}` | {summary} |"
 
     if not idx_path.exists():
         header = "| Date | Title | Filename | Summary |\n|---|---|---|---|\n"
         write_file(idx_path, header + row + "\n")
     else:
         content = idx_path.read_text(encoding="utf-8")
-        if args.filename not in content:
+        if f"`{args.filename}`" not in content:
             write_file(idx_path, content.rstrip() + "\n" + row + "\n")
 
     print(f"INDEXED:{args.filename}")

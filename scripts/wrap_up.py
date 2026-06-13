@@ -56,8 +56,16 @@ def diff_stat_mode(cwd: Path) -> None:
 
 
 def commit_mode(cwd: Path, message: str) -> None:
-    # stage everything
-    code, _, err = _run_git("add", "-A", cwd=cwd)
+    # warn about untracked files (not staged by -u)
+    _, untracked_out, _ = _run_git("ls-files", "--others", "--exclude-standard", cwd=cwd)
+    if untracked_out.strip():
+        print("UNTRACKED:")
+        for uf in untracked_out.strip().splitlines():
+            print(f"  {uf}")
+        print("(These will not be staged. Use 'git add <file>' to include them.)")
+
+    # stage tracked modifications and deletions only
+    code, _, err = _run_git("add", "-u", cwd=cwd)
     if code != 0:
         print(f"FAILED:git add failed: {err}")
         return
