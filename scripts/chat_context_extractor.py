@@ -76,7 +76,8 @@ def _first_user_message(turns: list) -> str:
     return ""
 
 
-def _generate_title(first_msg: str) -> str:
+def _generate_title_hint(first_msg: str) -> str:
+    """Fallback title hint — LLM sub-agent will derive the real title."""
     first_line = first_msg.split("\n")[0].strip()
     first_line = re.sub(r"[#*`]", "", first_line).strip()
     return first_line[:80] or "Untitled Session"
@@ -90,17 +91,46 @@ def _extract_tags(title: str, files: list) -> str:
     return ", ".join(tags) if tags else "session"
 
 
-def _build_transcript(turns: list, max_chars: int = 6000) -> str:
-    lines = []
+def _extract_assistant_skeleton(text: str) -> str:
+    """Keep tool call lines + up to 2 preceding prose lines each, plus opening lines."""
+    lines = text.split("\n")
+    to_include: set[int] = set()
+
+    # Opening lines give intent context
+    for i in range(min(3, len(lines))):
+        to_include.add(i)
+
+    for i, line in enumerate(lines):
+        if re.match(r'\s*\[(Write|Edit|Bash)\]', line):
+            to_include.add(i)
+            for j in range(max(0, i - 2), i):
+                to_include.add(j)
+
+    kept = [lines[i].strip() for i in sorted(to_include) if i < len(lines)]
+    return "\n".join(l for l in kept if l)
+
+
+def _build_transcript(turns: list, max_chars: int = 20000) -> str:
+    """Work-skeleton transcript: all user messages + assistant tool calls with context."""
+    parts = []
     total = 0
+
     for t in turns:
-        prefix = "user" if t["role"] == "user" else "assistant"
-        line = f"{prefix}: {t['text'][:500]}"
-        total += len(line)
-        if total > max_chars:
+        if t["role"] == "user":
+            entry = f"user: {t['text'][:1000]}"
+        else:
+            skeleton = _extract_assistant_skeleton(t["text"])
+            if not skeleton:
+                continue
+            entry = f"assistant: {skeleton}"
+
+        if total + len(entry) > max_chars:
+            parts.append("...[truncated: session exceeded extraction limit]")
             break
-        lines.append(line)
-    return "\n".join(lines)
+        parts.append(entry)
+        total += len(entry)
+
+    return "\n\n".join(parts)
 
 
 def main():
@@ -119,19 +149,21 @@ def main():
         print(f"ERROR:no readable turns in {jsonl_path}", file=sys.stderr)
         sys.exit(1)
 
-    title = _generate_title(_first_user_message(turns))
+    first_msg = _first_user_message(turns)
+    title_hint = _generate_title_hint(first_msg)
     date = datetime.fromtimestamp(jsonl_path.stat().st_mtime).strftime("%Y-%m-%d")
     files = _files_modified(turns)
-    tags = _extract_tags(title, files)
+    tags = _extract_tags(title_hint, files)
     transcript = _build_transcript(turns)
 
     print(json.dumps({
         "session_id": session_id,
         "date": date,
-        "title": title,
+        "title_hint": title_hint,
         "files_modified": files,
         "tags": tags,
         "transcript": transcript,
+        "turn_count": len(turns),
     }))
 
 
