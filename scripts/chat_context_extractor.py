@@ -1,175 +1,236 @@
-"""Extract structured JSON from a Claude Code .jsonl session file."""
+"""Clean a Claude Code .jsonl session transcript to lean JSON for the synthesis agent."""
 
 import sys
 import json
-import argparse
 import re
+import os
+from datetime import datetime, timezone
 from pathlib import Path
-from datetime import datetime
 
-sys.path.insert(0, str(Path(__file__).parent))
+TOOL_KEEP = {
+    'Read', 'Write', 'Bash', 'Edit', 'Grep', 'Glob', 'Agent',
+    'ExitPlanMode', 'AskUserQuestion', 'WebFetch', 'WebSearch',
+}
 
-
-def _extract_text(content) -> str:
-    if isinstance(content, str):
-        return content.strip()
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, dict):
-                if block.get("type") == "text":
-                    parts.append(block.get("text", "").strip())
-                elif block.get("type") == "tool_use":
-                    name = block.get("name", "")
-                    inp = block.get("input", {})
-                    if name == "Write" and "file_path" in inp:
-                        parts.append(f"[Write] {inp['file_path']}")
-                    elif name == "Edit" and "file_path" in inp:
-                        parts.append(f"[Edit] {inp['file_path']}")
-                    elif name == "Bash" and "command" in inp:
-                        cmd = inp["command"][:120].replace("\n", " ")
-                        parts.append(f"[Bash] {cmd}")
-        return "\n".join(p for p in parts if p)
-    return ""
+SKIP_PHRASES = {
+    '[request interrupted by user]', 'continue', 'continue.', 'ok', 'okay',
+    'done', 'proceed', 'continue from where you left off.',
+    'continue from where you left off',
+}
 
 
-def parse_jsonl(jsonl_path: Path) -> list:
-    turns = []
-    with jsonl_path.open(encoding="utf-8", errors="replace") as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            msg = obj.get("message", {})
-            if not isinstance(msg, dict):
-                continue
-            role = msg.get("role", "")
-            content = msg.get("content", "")
-            text = _extract_text(content)
-            if text:
-                turns.append({"role": role, "text": text})
-    return turns
+def _is_skill_injection(text):
+    if text.startswith("Base directory for this skill:"):
+        return True
+    if re.match(r'^#\s+.+\n.*##\s+Step', text, re.MULTILINE):
+        return True
+    return False
 
 
-def _files_modified(turns: list) -> list:
-    files = []
-    seen = set()
-    for t in turns:
-        if t["role"] != "assistant":
-            continue
-        for m in re.finditer(r'\[(Write|Edit)\] (.+)', t["text"]):
-            path = m.group(2).strip()
-            if path not in seen:
-                seen.add(path)
-                files.append(path)
+def _summarise_tool(name, inp):
+    if name == 'Read':
+        return "Read {}".format(inp.get('file_path', ''))
+    if name in ('Write', 'Edit'):
+        fp = inp.get('file_path', '')
+        desc = inp.get('description', '')
+        return "{} {}{}".format(name, fp, " [{}]".format(desc[:60]) if desc else "")
+    if name == 'Bash':
+        label = inp.get('description', '') or inp.get('command', '')[:120]
+        return "Bash: {}".format(label)
+    if name == 'Grep':
+        return "Grep pattern={}".format(inp.get('pattern', '')[:60])
+    if name == 'Glob':
+        return "Glob {} in {}".format(inp.get('pattern', ''), inp.get('path', '')[:40])
+    if name == 'Agent':
+        label = inp.get('description', '') or inp.get('prompt', '')
+        return "Agent: {}".format(label[:80])
+    if name in ('WebFetch', 'WebSearch'):
+        label = inp.get('url', '') or inp.get('query', '')
+        return "{}: {}".format(name, label[:80])
+    return name
+
+
+def _files_modified(tool_summaries):
+    seen, files = set(), []
+    for s in tool_summaries:
+        m = re.match(r'^(?:Write|Edit)\s+(.+?)(?:\s+\[|$)', s)
+        if m:
+            p = m.group(1).strip()
+            if p and p not in seen:
+                seen.add(p)
+                files.append(p)
     return files
 
 
-def _first_user_message(turns: list) -> str:
-    for t in turns:
-        if t["role"] == "user" and t["text"].strip():
-            return t["text"].strip()
-    return ""
+def _ts_to_hhmm(ts):
+    if not ts:
+        return '??:??'
+    try:
+        dt = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+        return dt.astimezone(timezone.utc).strftime('%H:%M')
+    except Exception:
+        return ts[11:16] if len(ts) >= 16 else '??:??'
 
 
-def _generate_title_hint(first_msg: str) -> str:
-    """Fallback title hint — LLM sub-agent will derive the real title."""
-    first_line = first_msg.split("\n")[0].strip()
-    first_line = re.sub(r"[#*`]", "", first_line).strip()
-    return first_line[:80] or "Untitled Session"
+def _ts_to_date(ts):
+    if not ts:
+        return ''
+    try:
+        dt = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+        return dt.strftime('%Y-%m-%d')
+    except Exception:
+        return ts[:10] if len(ts) >= 10 else ''
 
 
-def _extract_tags(title: str, files: list) -> str:
-    words = re.findall(r'[a-zA-Z]{4,}', title.lower())
-    exts = {Path(f).suffix.lstrip(".") for f in files if Path(f).suffix}
-    tags = list(dict.fromkeys(words))[:5]
-    tags += [e for e in sorted(exts) if e and e not in tags]
-    return ", ".join(tags) if tags else "session"
-
-
-def _extract_assistant_skeleton(text: str) -> str:
-    """Keep tool call lines + up to 2 preceding prose lines each, plus opening lines."""
-    lines = text.split("\n")
-    to_include: set[int] = set()
-
-    # Opening lines give intent context
-    for i in range(min(3, len(lines))):
-        to_include.add(i)
-
-    for i, line in enumerate(lines):
-        if re.match(r'\s*\[(Write|Edit|Bash)\]', line):
-            to_include.add(i)
-            for j in range(max(0, i - 2), i):
-                to_include.add(j)
-
-    kept = [lines[i].strip() for i in sorted(to_include) if i < len(lines)]
-    return "\n".join(l for l in kept if l)
-
-
-def _build_transcript(turns: list, max_chars: int = 20000) -> str:
-    """Work-skeleton transcript: all user messages + assistant tool calls with context."""
-    parts = []
-    total = 0
-
-    for t in turns:
-        if t["role"] == "user":
-            entry = f"user: {t['text'][:1000]}"
-        else:
-            skeleton = _extract_assistant_skeleton(t["text"])
-            if not skeleton:
-                continue
-            entry = f"assistant: {skeleton}"
-
-        if total + len(entry) > max_chars:
-            parts.append("...[truncated: session exceeded extraction limit]")
-            break
-        parts.append(entry)
-        total += len(entry)
-
-    return "\n\n".join(parts)
+def _clean_user_text(text):
+    for pat in [
+        r'<command-name>.*?</command-name>',
+        r'<command-message>.*?</command-message>',
+        r'<command-args>.*?</command-args>',
+        r'<local-command-stdout>.*?</local-command-stdout>',
+        r'<[a-z][a-z0-9_-]*(?:\s[^>]*)?>.*?</[a-z][a-z0-9_-]*>',
+    ]:
+        text = re.sub(pat, '', text, flags=re.DOTALL)
+    return text.strip()
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("jsonl_path", help=".jsonl session file path")
-    args = parser.parse_args()
+    if len(sys.argv) < 2:
+        print("ERROR:usage: chat_context_extractor.py <path.jsonl>", file=sys.stderr)
+        sys.exit(1)
 
-    jsonl_path = Path(args.jsonl_path).resolve()
+    jsonl_path = Path(sys.argv[1]).resolve()
     if not jsonl_path.exists():
-        print(f"ERROR:file not found: {jsonl_path}", file=sys.stderr)
+        print("ERROR:file not found: {}".format(jsonl_path), file=sys.stderr)
         sys.exit(1)
 
-    session_id = jsonl_path.stem
-    turns = parse_jsonl(jsonl_path)
+    session_id = ''
+    custom_title = ''
+    model = ''
+    first_ts = ''
+    last_ts = ''
+    turns = []
+    all_tool_summaries = []
+    sessions_seen = set()
+
+    with jsonl_path.open(encoding='utf-8', errors='replace') as fh:
+        for raw in fh:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                obj = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+
+            if obj.get('isSidechain', False):
+                continue
+
+            t = obj.get('type', '')
+            ts = obj.get('timestamp', '')
+            if ts:
+                if not first_ts or ts < first_ts:
+                    first_ts = ts
+                if not last_ts or ts > last_ts:
+                    last_ts = ts
+
+            sid = obj.get('sessionId', '')
+            if sid:
+                sessions_seen.add(sid)
+                session_id = sid
+
+            if t == 'custom-title':
+                custom_title = obj.get('customTitle', '')
+                continue
+            if t not in ('user', 'assistant'):
+                continue
+
+            msg = obj.get('message', {})
+            if not isinstance(msg, dict):
+                continue
+            content = msg.get('content', [])
+
+            if t == 'assistant':
+                if not model:
+                    model = msg.get('model', '')
+                texts, tool_summaries = [], []
+                if isinstance(content, list):
+                    for item in content:
+                        if not isinstance(item, dict):
+                            continue
+                        ct = item.get('type', '')
+                        if ct == 'text':
+                            texts.append(item.get('text', ''))
+                        elif ct == 'tool_use':
+                            name = item.get('name', '')
+                            inp = item.get('input', {}) or {}
+                            if name in TOOL_KEEP:
+                                summary = _summarise_tool(name, inp)
+                                tool_summaries.append(summary)
+                                all_tool_summaries.append(summary)
+                elif isinstance(content, str):
+                    texts.append(content)
+
+                prose = ' '.join(x for x in texts if x.strip())[:1200]
+                if prose.strip() or tool_summaries:
+                    turns.append({
+                        'role': 'assistant',
+                        'hhmm': _ts_to_hhmm(ts),
+                        'text': prose,
+                        'tools': tool_summaries,
+                    })
+
+            elif t == 'user':
+                if isinstance(content, str):
+                    cleaned = _clean_user_text(content)
+                elif isinstance(content, list):
+                    parts = [
+                        _clean_user_text(i.get('text', ''))
+                        for i in content
+                        if isinstance(i, dict) and i.get('type') == 'text'
+                    ]
+                    cleaned = ' '.join(p for p in parts if p)
+                else:
+                    cleaned = ''
+
+                if not cleaned:
+                    continue
+                if cleaned.lower() in SKIP_PHRASES:
+                    continue
+                if _is_skill_injection(cleaned):
+                    continue
+                if re.match(r'^\[image\s*[:#]', cleaned, re.IGNORECASE):
+                    continue
+
+                turns.append({
+                    'role': 'user',
+                    'hhmm': _ts_to_hhmm(ts),
+                    'text': cleaned[:600],
+                })
+
     if not turns:
-        print(f"ERROR:no readable turns in {jsonl_path}", file=sys.stderr)
+        print("ERROR:no readable turns in {}".format(jsonl_path), file=sys.stderr)
         sys.exit(1)
-
-    first_msg = _first_user_message(turns)
-    title_hint = _generate_title_hint(first_msg)
-    date = datetime.fromtimestamp(jsonl_path.stat().st_mtime).strftime("%Y-%m-%d")
-    files = _files_modified(turns)
-    tags = _extract_tags(title_hint, files)
-    transcript = _build_transcript(turns)
 
     print(json.dumps({
-        "session_id": session_id,
-        "date": date,
-        "title_hint": title_hint,
-        "files_modified": files,
-        "tags": tags,
-        "transcript": transcript,
-        "turn_count": len(turns),
+        'session_id': session_id,
+        'custom_title': custom_title,
+        'model': model,
+        'date': _ts_to_date(first_ts),
+        'first_ts': first_ts,
+        'last_ts': last_ts,
+        'turns': turns,
+        'files_modified': _files_modified(all_tool_summaries),
+        'session_count': len(sessions_seen),
+        'project_root': os.getcwd(),
+        'total_user': sum(1 for t in turns if t['role'] == 'user'),
+        'total_assistant': sum(1 for t in turns if t['role'] == 'assistant'),
     }))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        print(f"ERROR:{e}", file=sys.stderr)
+        print("ERROR:{}".format(e), file=sys.stderr)
         sys.exit(1)
