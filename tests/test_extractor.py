@@ -133,3 +133,82 @@ def test_files_modified_tracks_writes(tmp_path):
     data = _run(_make_jsonl(tmp_path, entries))
     assert "scripts/foo.py" in data["files_modified"]
     assert "scripts/bar.py" in data["files_modified"]
+
+
+# ── Catchup merger tests ────────────────────────────────────────────────────
+
+CATCHUP = Path(__file__).parent.parent / "scripts" / "catchup.py"
+
+
+def _write_index(directory: Path, rows: list) -> None:
+    """Write a chat-contexts/INDEX.md with the given rows."""
+    ctx = directory / "chat-contexts"
+    ctx.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Chat Context Index\n",
+        "| Date | Title | File | First Accomplishment |\n",
+        "|------|-------|------|---------------------|\n",
+    ]
+    for date, title, filename in rows:
+        lines.append("| {} | {} | `{}` | bullet |\n".format(date, title, filename))
+    (ctx / "INDEX.md").write_text("".join(lines), encoding="utf-8")
+
+
+def _run_catchup(cwd: Path) -> list:
+    result = subprocess.run(
+        [PYTHON, str(CATCHUP)],
+        capture_output=True, text=True, cwd=str(cwd)
+    )
+    output = result.stdout.strip()
+    if output == "NONE" or not output:
+        return []
+    return [line for line in output.splitlines() if line.strip()]
+
+
+def test_catchup_returns_none_when_no_index(tmp_path):
+    lines = _run_catchup(tmp_path)
+    assert lines == []
+
+
+def test_catchup_reads_cwd_index(tmp_path):
+    _write_index(tmp_path, [("2026-07-01", "Session A", "2026-07-01-a.md")])
+    lines = _run_catchup(tmp_path)
+    assert len(lines) == 1
+    assert "Session A" in lines[0]
+
+
+def test_catchup_merges_and_deduplicates(tmp_path):
+    # CWD index
+    _write_index(tmp_path, [
+        ("2026-07-01", "Session A", "2026-07-01-a.md"),
+        ("2026-07-03", "Session C", "2026-07-03-c.md"),
+    ])
+    # Git root index (simulate via a parent dir with .git marker)
+    git_root = tmp_path / "project"
+    git_root.mkdir()
+    (git_root / ".git").mkdir()
+    _write_index(git_root, [
+        ("2026-07-01", "Session A", "2026-07-01-a.md"),  # duplicate
+        ("2026-07-02", "Session B", "2026-07-02-b.md"),  # additive
+    ])
+    # Run catchup from a subdirectory of git_root, so CWD != git_root
+    sub = git_root / "src"
+    sub.mkdir()
+    # Also put CWD index in sub (simulating CWD chat-contexts)
+    _write_index(sub, [("2026-07-03", "Session C", "2026-07-03-c.md")])
+
+    lines = _run_catchup(sub)
+    # Should have A + B + C without duplicate A
+    titles = [l.split("|")[1].strip() for l in lines]
+    assert len(titles) == len(set(titles)), "Duplicates found: {}".format(titles)
+
+
+def test_catchup_sorted_newest_first(tmp_path):
+    _write_index(tmp_path, [
+        ("2026-06-01", "Old Session", "2026-06-01-old.md"),
+        ("2026-07-05", "New Session", "2026-07-05-new.md"),
+        ("2026-06-15", "Mid Session", "2026-06-15-mid.md"),
+    ])
+    lines = _run_catchup(tmp_path)
+    dates = [l.split("|")[0].strip() for l in lines]
+    assert dates == sorted(dates, reverse=True), "Not sorted newest-first: {}".format(dates)
