@@ -66,10 +66,38 @@ Parse last non-empty line. If `ERROR:` → report and stop.
 
 ## Step 1 — Clean the Transcript
 
-Run the cleaner (substitute the resolved path for `<path>`):
+Run the cleaner (substitute the resolved path for `<path>`).
+
+If `CLAUDE_PLUGIN_ROOT` is set in the environment, use it directly. Otherwise derive the
+plugin root by walking up from `cwd` until a directory containing
+`scripts/chat_context_extractor.py` is found (same logic as `get_plugin_root()` in
+`scripts/lib/utils.py`).
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/scripts/chat_context_extractor.py" "<path>"
+python -c "
+import os, sys, subprocess
+from pathlib import Path
+
+root = os.environ.get('CLAUDE_PLUGIN_ROOT', '').strip()
+if not root:
+    p = Path(os.getcwd())
+    while p != p.parent:
+        if (p / 'scripts' / 'chat_context_extractor.py').exists():
+            root = str(p)
+            break
+        p = p.parent
+if not root:
+    sys.exit('ERROR: cannot resolve plugin root — set CLAUDE_PLUGIN_ROOT or run from inside the plugin tree')
+
+result = subprocess.run(
+    [sys.executable, os.path.join(root, 'scripts', 'chat_context_extractor.py'), sys.argv[1]],
+    capture_output=True, text=True
+)
+print(result.stdout, end='')
+if result.returncode:
+    print(result.stderr, file=sys.stderr)
+    sys.exit(result.returncode)
+" "<path>" 2>&1
 ```
 
 Parse the last non-empty line of stdout as JSON.

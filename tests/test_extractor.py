@@ -178,29 +178,25 @@ def test_catchup_reads_cwd_index(tmp_path):
 
 
 def test_catchup_merges_and_deduplicates(tmp_path):
-    # CWD index
-    _write_index(tmp_path, [
-        ("2026-07-01", "Session A", "2026-07-01-a.md"),
-        ("2026-07-03", "Session C", "2026-07-03-c.md"),
-    ])
-    # Git root index (simulate via a parent dir with .git marker)
     git_root = tmp_path / "project"
     git_root.mkdir()
     (git_root / ".git").mkdir()
+    # Primary index: Session A + Session B
     _write_index(git_root, [
-        ("2026-07-01", "Session A", "2026-07-01-a.md"),  # duplicate
-        ("2026-07-02", "Session B", "2026-07-02-b.md"),  # additive
+        ("2026-07-01", "Session A", "2026-07-01-a.md"),
+        ("2026-07-02", "Session B", "2026-07-02-b.md"),
     ])
-    # Run catchup from a subdirectory of git_root, so CWD != git_root
+    # CWD (sub of git_root): also contains Session A (duplicate) + Session C
     sub = git_root / "src"
     sub.mkdir()
-    # Also put CWD index in sub (simulating CWD chat-contexts)
-    _write_index(sub, [("2026-07-03", "Session C", "2026-07-03-c.md")])
-
+    _write_index(sub, [
+        ("2026-07-01", "Session A", "2026-07-01-a.md"),  # duplicate
+        ("2026-07-03", "Session C", "2026-07-03-c.md"),  # additive
+    ])
     lines = _run_catchup(sub)
-    # Should have A + B + C without duplicate A
-    titles = [l.split("|")[1].strip() for l in lines]
-    assert len(titles) == len(set(titles)), "Duplicates found: {}".format(titles)
+    filenames = [l.split("|")[2].strip() for l in lines]
+    assert len(filenames) == len(set(filenames)), "Duplicates found: {}".format(filenames)
+    assert len(filenames) == 3, "Expected A+B+C = 3 unique sessions, got: {}".format(filenames)
 
 
 def test_catchup_sorted_newest_first(tmp_path):

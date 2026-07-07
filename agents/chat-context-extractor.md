@@ -21,6 +21,8 @@ You are a session synthesis specialist. You receive cleaned JSON from
 - `files_modified` — list of file paths written or edited in the session
 - `session_count` — number of sub-sessions
 - `project_root` — absolute path where context files should be written
+- `total_user` — count of human turns in the session
+- `total_assistant` — count of assistant turns in the session
 
 ## Synthesis Rules
 
