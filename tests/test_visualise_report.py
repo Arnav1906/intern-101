@@ -40,7 +40,8 @@ def test_report_has_both_sections(tmp_path):
         {"id": "a", "label": "A", "type": "function", "description": "Alpha", "community": 0, "confidence": "EXTRACTED"},
         {"id": "b", "label": "B", "type": "function", "description": "Beta",  "community": 1, "confidence": "EXTRACTED"},
     ], [{"source": "a", "target": "b", "label": "calls", "weight": 1.0}])
-    _run([], tmp_path)
+    result = _run([], tmp_path)
+    assert result.returncode == 0, result.stderr
     content = (tmp_path / "visualise-out" / "GRAPH_REPORT.md").read_text(encoding="utf-8")
     assert "## Architecture by Cluster" in content
     assert "## Node Reference" in content
@@ -51,7 +52,8 @@ def test_report_handles_missing_community(tmp_path):
     _make_graph(tmp_path, [
         {"id": "x", "label": "X", "type": "module", "description": "No community"},
     ], [])
-    _run([], tmp_path)
+    result = _run([], tmp_path)
+    assert result.returncode == 0, result.stderr
     content = (tmp_path / "visualise-out" / "GRAPH_REPORT.md").read_text(encoding="utf-8")
     assert "unclustered" in content.lower()
 
@@ -92,7 +94,8 @@ def test_report_cross_cluster_edges_in_section1(tmp_path):
         {"id": "p", "label": "P", "type": "module", "description": "P desc", "community": 0, "confidence": "EXTRACTED"},
         {"id": "q", "label": "Q", "type": "module", "description": "Q desc", "community": 1, "confidence": "EXTRACTED"},
     ], [{"source": "p", "target": "q", "label": "imports", "weight": 1.0}])
-    _run([], tmp_path)
+    result = _run([], tmp_path)
+    assert result.returncode == 0, result.stderr
     content = (tmp_path / "visualise-out" / "GRAPH_REPORT.md").read_text(encoding="utf-8")
     assert "p → q" in content
 
