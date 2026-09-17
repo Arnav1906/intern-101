@@ -41,11 +41,11 @@ Examples that work:
 
 | Skill | What it does |
 |---|---|
-| `/catchup` | Shows last 5 sessions, asks what to load, delivers a "where you left off" summary |
+| `/catchup` | Shows last 5 sessions with summaries, asks what to load, delivers a "where you left off" summary sourced from each session's Next Steps. Offers to run `/extract-today` first if today's sessions aren't indexed yet. |
 | `/extract-today` | Finds all new sessions from today not yet saved, confirms, batch-extracts them |
-| `chat-context-extractor` | Extracts a single `.jsonl` session into a structured markdown context doc. Auto-locates the latest session if no path given. Use when you want to extract one specific session rather than today's batch. |
+| `chat-context-extractor` | Extracts a single `.jsonl` session into a structured markdown context doc (Summary, Accomplishments, Key Decisions & Findings, Next Steps, Files Modified). Auto-locates the latest session if no path given. Use when you want to extract one specific session rather than today's batch. |
 | `/daily-update` | Reads today's extracted sessions and generates a 5–7 point plain-language update for your supervisor |
-| `/recall <query>` | Searches past session titles and summaries for a keyword, returns matching sessions with snippets |
+| `/recall <query>` | Searches past session titles and summaries for a keyword, returns matching sessions with snippets and next steps |
 | `/status` | Shows all sub-projects' current status, pending items, and next actions in one table |
 | `/wrap-up` | End-of-day: checks git status → prompts to commit if needed → extracts today's sessions |
 
@@ -169,6 +169,7 @@ intern-101/
     project_index_manager.py
     recall.py
     status.py
+    update_index.py
     wrap_up.py
 ```
 
