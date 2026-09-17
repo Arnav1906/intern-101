@@ -18,8 +18,8 @@ def main():
 
     ctx_dir = get_chat_contexts_dir(Path.cwd())
     idx_path = ctx_dir / "INDEX.md"
-    title = args.title[:80].replace("|", "-")
-    summary = args.summary[:120].replace("|", "-")
+    title = args.title[:150].replace("|", "-")
+    summary = args.summary[:300].replace("|", "-")
     row = f"| {args.date} | {title} | `{args.filename}` | {summary} |"
 
     if not idx_path.exists():

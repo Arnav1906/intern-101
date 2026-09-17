@@ -16,17 +16,21 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/catchup.py" 2>&1
 ```
 
 - `NONE` or no output → tell user: "No session history found. Run `/extract-today` first." Stop.
+- First line is `STALE:<n>` → today's sessions exist but aren't in INDEX.md yet. Tell the user: "Found <n> session(s) from today not yet extracted — want me to run `/extract-today` first, or continue with what's indexed?" Wait for answer before proceeding. The remaining lines are the session list regardless of their choice.
 - Lines returned → proceed to Step 2.
 
 ## Step 2 — Present menu, ask what to load
 
-Show last sessions as a numbered list:
+Show last sessions as a numbered list, including the summary column from each line:
 
 ```
 Last sessions (up to 5):
   1. <date> — <title>
+     <summary>
   2. <date> — <title>
+     <summary>
   3. <date> — <title>  ← most recent
+     <summary>
 
 Which to resume? Load:
   a) Summary only (recommended)
@@ -39,7 +43,7 @@ Which to resume? Load:
 ## Step 3 — Load what was chosen
 
 **Option a — Summary only:**
-Read chosen `chat-contexts/<filename>`. Extract and present only `## Summary` and `## Key Decisions & Findings`. Do not surface the full file in context.
+Read chosen `chat-contexts/<filename>`. Extract and present only `## Summary`, `## Key Decisions & Findings`, and `## Next Steps`. Do not surface the full file in context.
 
 **Option b — Summary + progress:**
 Read summary sections as above. Then check `projects/` for sub-project name matching session tags. Ask:
@@ -58,7 +62,7 @@ Read full chat-context file. Ask about `_progress.md` as above.
 <2-3 sentences from Summary>
 
 **Where you left off:**
-<Pending items from _progress.md if loaded, else last 2-3 assistant turns>
+<`## Next Steps` from the context file if present; else pending items from _progress.md if loaded; else last 2-3 assistant turns>
 
 **Immediate next step:**
 <Single most actionable next thing>

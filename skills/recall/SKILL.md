@@ -55,7 +55,7 @@ Ask: "Open one (enter number), or 'search content' to grep file bodies."
 
 ## Step 4 — Load chosen session or expand search
 
-**If number entered:** Read `chat-contexts/<filename>`, present `## Summary` and `## Key Decisions & Findings`. Offer to load full file.
+**If number entered:** Read `chat-contexts/<filename>`, present `## Summary`, `## Key Decisions & Findings`, and `## Next Steps`. Offer to load full file.
 
 **If "search content":**
 

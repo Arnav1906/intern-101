@@ -1,6 +1,6 @@
 # Intern 101
 
-A standalone Claude Code plugin for interns and working professionals. Handles the repetitive parts of a work session — session catchup, daily updates, end-of-day wrap-up, project organization, and interactive codebase knowledge graphs.
+A standalone Claude Code plugin for interns and working professionals. Handles the repetitive parts of a work session — session catchup, daily updates, end-of-day wrap-up, and project organization.
 
 **Single entry point:** just type `/intern` and describe what you need. No need to remember skill names.
 
@@ -12,7 +12,6 @@ A standalone Claude Code plugin for interns and working professionals. Handles t
 /intern I'm starting work — what was I doing?   → catchup
 /intern done for today                           → wrap-up (git check + extract)
 /intern write my daily update                    → daily-update
-/intern map this codebase                        → visualise
 ```
 
 Or invoke skills directly if you prefer.
@@ -35,7 +34,6 @@ Examples that work:
 - "what did I do this week" → `/daily-update`
 - "find sessions about authentication" → `/recall`
 - "show me all project statuses" → `/status`
-- "build a graph of this repo" → `/visualise`
 
 ---
 
@@ -61,18 +59,6 @@ Examples that work:
 
 ---
 
-### Knowledge Graph (`/visualise` suite)
-
-| Skill | What it does |
-|---|---|
-| `/visualise [path]` | Builds an interactive HTML knowledge graph — AST + semantic extraction, Louvain community detection, god-node identification, confidence audit trail (`EXTRACTED` / `INFERRED` / `AMBIGUOUS`) |
-| `/visualise-search <query>` | Finds graph nodes by natural language — no need to know exact names |
-| `/visualise-gaps` | Lists isolated (undocumented/disconnected) nodes; `--draft` auto-generates stub docs for each |
-| `/visualise-history` | Walks git history, snapshots the graph at each commit, generates a time-slider HTML |
-| `/visualise-diff` | Color-coded diff between two snapshots — shows added, removed, and shifted nodes/edges |
-
----
-
 ## Recommended Workflow
 
 ```
@@ -82,8 +68,6 @@ Examples that work:
 
 # During the day
 /recall <topic>                  → find past sessions before starting new work
-/visualise                       → map the codebase architecture
-/visualise-search <query>        → find relevant nodes without knowing exact names
 
 # End of day
 /wrap-up                         → git check + optional commit + session extraction in one flow
@@ -130,11 +114,6 @@ Add to `~/.claude/settings.json`:
 - Python 3.8+
 - Windows, macOS, and Linux supported
 
-**For `/visualise` skills only:**
-```bash
-pip install networkx==3.3 python-louvain==0.16
-```
-
 ---
 
 ## End-of-Day Hook (optional)
@@ -168,19 +147,12 @@ intern-101/
     status/
     wrap-up/
 
-  plugins/
-    visualise/
-      skills/            ← visualise, visualise-search, visualise-gaps, visualise-history, visualise-diff
-      assets/            ← HTML templates (graph, diff, history)
-
   agents/
-    graph-analyst.md     ← orchestrates visualise suite with judgment (full vs incremental, sequencing)
     session-manager.md   ← orchestrates session skills (catchup + recall + daily-update flows)
 
   rules/
     output-format.md     ← daily-update format, context filename convention
     file-boundaries.md   ← no path traversal, no overwrite protection
-    graph-conventions.md ← visualise-out/ layout, graph.json schema, extract→cluster→render order
 
   hooks/
     hooks.json           ← Stop event → stop-extract-prompt.sh
@@ -190,7 +162,6 @@ intern-101/
     lib/
       utils.py           ← CLAUDE_PLUGIN_ROOT resolution, path helpers, file I/O
       session.py         ← INDEX.md parsing, session file ops, slugify
-      graph.py           ← graph.json load/save/query
     catchup.py
     chat_context_extractor.py
     daily_update.py
@@ -199,14 +170,6 @@ intern-101/
     recall.py
     status.py
     wrap_up.py
-    visualise/
-      extract.py         ← AST + semantic extraction → graph.json
-      cluster.py         ← Louvain community detection
-      render.py          ← graph.json + template → graph.html
-      search.py
-      gaps.py
-      diff.py
-      history.py
 ```
 
 Each skill is a thin instruction layer — all Python logic lives in `scripts/`. Skills call scripts via `python "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.py"`, which makes scripts testable independently and keeps SKILL.md files focused on flow, not implementation.

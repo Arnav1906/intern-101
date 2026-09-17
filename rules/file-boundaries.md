@@ -17,9 +17,3 @@ Always-on safety rule. All intern-101 skills must obey these constraints.
 
 - Never delete any file without explicit user confirmation in the same message
 - "clean up" or "remove old files" is not sufficient — ask for confirmation and list affected paths
-
-## graph output
-
-- `visualise-out/` is the only allowed output directory for graph files
-- Never write `graph.json` or any rendered HTML to the project root or any other directory
-- If `visualise-out/` does not exist, create it before writing — do not fall back to another location

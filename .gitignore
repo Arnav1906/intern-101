@@ -1,10 +1,19 @@
 docs/superpowers/plans/
 docs/superpowers/specs/
+docs/
 .claude/
 .superpowers/
 __pycache__/
+.pytest_cache/
 *.pyc
 *.pyo
 *.zip
 fix.md
 tests/
+
+# visualisation subsystem — removed from the plugin, kept locally for possible future use
+plugins/visualise/
+scripts/visualise/
+scripts/lib/graph.py
+agents/graph-analyst.md
+rules/graph-conventions.md

@@ -3,8 +3,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib.utils import get_chat_contexts_dir
-from lib.session import parse_index_rows
+from lib.utils import get_chat_contexts_dir, get_claude_dir, today_str
+from lib.session import parse_index_rows, list_todays_jsonl
 
 
 def _find_git_root(start):
@@ -56,9 +56,15 @@ try:
         print("NONE")
         sys.exit(0)
 
+    # Flag when today's sessions exist on disk but none made it into INDEX.md
+    if not any(r["date"] == today_str() for r in merged):
+        todays_jsonl = list_todays_jsonl(get_claude_dir(), cwd)
+        if todays_jsonl:
+            print("STALE:{}".format(len(todays_jsonl)))
+
     for row in merged[:5]:
         if row["filename"]:
-            print("{} | {} | {}".format(row["date"], row["title"], row["filename"]))
+            print("{} | {} | {} | {}".format(row["date"], row["title"], row["filename"], row["summary"]))
 
 except Exception as e:
     print("ERROR:{}".format(e), file=sys.stderr)

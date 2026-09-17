@@ -46,6 +46,13 @@ What was done — no "why", no sub-bullets, no blockers, no future tense.
 **Key Decisions & Findings:** Concrete conclusions useful months later.
 Omit this section entirely if nothing notable was decided or discovered.
 
+**Next Steps:** The concrete unresolved work — what the session was
+partway through, or the next actionable step the user would take picking
+this back up. Derive from the last few turns (unfinished requests, stated
+TODOs, open questions). Flat bullet list, imperative mood ("Fix the null
+check in X", not "Should fix..."). Omit this section entirely if the
+session reached a clean stopping point with nothing pending.
+
 **Files Modified:** From `files_modified`. Omit section if the list is empty.
 
 ## Output Document Format
@@ -69,6 +76,9 @@ tags: [3-6 tags derived from title words + unique file extensions from files_mod
 
 ## Key Decisions & Findings
 - <concrete conclusion>
+
+## Next Steps
+- <unresolved item or next actionable step>
 
 ## Files Modified
 - path/to/file

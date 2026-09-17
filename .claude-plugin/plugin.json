@@ -1,12 +1,12 @@
 {
   "name": "intern-101",
-  "description": "Session management, project organization, and knowledge graph visualization for Claude Code — daily updates, context extraction, project indexing, session catchup, and architecture mapping.",
-  "version": "3.0.0",
+  "description": "Session management and project organization for Claude Code — daily updates, context extraction, project indexing, and session catchup.",
+  "version": "3.1.0",
   "author": {
     "name": "Arnav Bhalla"
   },
   "license": "MIT",
-  "keywords": ["productivity", "session-management", "daily-update", "project-organization", "context", "knowledge-graph", "visualization", "architecture"],
+  "keywords": ["productivity", "session-management", "daily-update", "project-organization", "context"],
   "skills": [
     "./skills/intern/",
     "./skills/catchup/",
@@ -16,22 +16,15 @@
     "./skills/project-index-manager/",
     "./skills/recall/",
     "./skills/status/",
-    "./skills/wrap-up/",
-    "./plugins/visualise/skills/visualise/",
-    "./plugins/visualise/skills/visualise-search/",
-    "./plugins/visualise/skills/visualise-gaps/",
-    "./plugins/visualise/skills/visualise-history/",
-    "./plugins/visualise/skills/visualise-diff/"
+    "./skills/wrap-up/"
   ],
   "agents": [
     "./agents/chat-context-extractor.md",
-    "./agents/graph-analyst.md",
     "./agents/session-manager.md"
   ],
   "rules": [
     "./rules/output-format.md",
-    "./rules/file-boundaries.md",
-    "./rules/graph-conventions.md"
+    "./rules/file-boundaries.md"
   ],
   "scripts": "./scripts/"
 }
