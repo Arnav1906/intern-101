@@ -9,7 +9,11 @@ __pycache__/
 *.pyo
 *.zip
 fix.md
-tests/
+tests/*
+!tests/codex/
+!tests/codex/*.py
+dist/
+.codex-test/
 
 # visualisation subsystem — removed from the plugin, kept locally for possible future use
 plugins/visualise/

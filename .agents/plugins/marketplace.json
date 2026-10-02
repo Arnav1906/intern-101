@@ -1,0 +1,12 @@
+{
+  "name": "intern-101-codex",
+  "interface": { "displayName": "Intern 101 for Codex" },
+  "plugins": [
+    {
+      "name": "intern-101",
+      "source": { "source": "local", "path": "./plugins/intern-101-codex" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

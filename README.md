@@ -1,8 +1,8 @@
 # Intern 101
 
-A standalone Claude Code plugin for interns and working professionals. Handles the repetitive parts of a work session — session catchup, daily updates, end-of-day wrap-up, and project organization.
+A productivity plugin for interns and working professionals, with separate Claude Code and Codex installations. Handles session catchup, daily updates, end-of-day wrap-up, and project organization.
 
-**Single entry point:** just type `/intern` and describe what you need. No need to remember skill names.
+**Single entry point:** type `/intern` in Claude Code or `$intern-101:intern` in Codex and describe what you need.
 
 ---
 
@@ -76,6 +76,19 @@ Examples that work:
 ---
 
 ## Install
+
+### Codex — Marketplace
+
+```text
+codex plugin marketplace add Arnav1906/intern-101 --sparse .agents/plugins --sparse plugins/intern-101-codex
+codex plugin add intern-101@intern-101-codex
+```
+
+These remote commands require the Codex package and catalog to be available on GitHub. For the current local checkout, use `codex plugin marketplace add .` followed by the same `plugin add` command.
+
+The Codex marketplace installs only the package under `plugins/intern-101-codex/`. Its skills read this project's Codex history and save notes in the project. See the [Codex guide](plugins/intern-101-codex/README.md) for configuration, supported history formats, and local verification. The repository's existing Claude marketplace remains separate.
+
+### Claude Code
 
 ### Option 1 — CLI
 

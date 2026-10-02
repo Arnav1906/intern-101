@@ -1,0 +1,19 @@
+{
+  "name": "intern-101",
+  "version": "3.1.0",
+  "description": "Save Codex session context, resume work, generate daily updates, and organize project progress.",
+  "author": { "name": "Arnav Bhalla" },
+  "repository": "https://github.com/Arnav1906/intern-101",
+  "license": "MIT",
+  "skills": "./skills/",
+  "hooks": {},
+  "interface": {
+    "displayName": "Intern 101",
+    "shortDescription": "Session context and daily work updates for Codex",
+    "longDescription": "Extract this project's Codex chats into Markdown, resume unfinished work, recall previous sessions, and track sub-project progress.",
+    "developerName": "Arnav Bhalla",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write", "Interactive"],
+    "defaultPrompt": ["Catch me up on this project.", "Save today's sessions and write my daily update."]
+  }
+}
