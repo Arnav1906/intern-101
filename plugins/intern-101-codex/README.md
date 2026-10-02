@@ -1,56 +1,70 @@
 # Intern 101 for Codex
 
-A standalone Codex marketplace plugin. It reads Codex's session history for the
-active project and saves work context, daily updates, and project progress as
-project-local Markdown. Python 3.9+ is required; no pip dependencies or separate
-API key are needed. Codex performs the synthesis using its active model.
+A standalone Codex Marketplace plugin for saving session context, resuming work, writing daily updates, and organizing project progress. It reads this project's Codex history and saves notes as project-local Markdown.
 
-## Install from this repository's marketplace
+## Contents
 
-After these files are available on GitHub:
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start and skills](#quick-start-and-skills)
+- [Configuration and history](#configuration-and-history)
+- [Agents and hooks](#agents-and-hooks)
+- [Uninstall](#uninstall)
+- [Local development](#local-development)
+- [References](#references)
+- [License](#license)
 
-```text
+## Requirements
+
+Codex with plugin Marketplace support and Python **3.9+**. The runtime uses the standard library, with no pip dependencies or separate plugin API key. Sign in to Codex as usual; Codex uses its active model to synthesize summaries. Windows, macOS, and Linux are supported.
+
+## Installation
+
+Run in your terminal:
+
+```sh
 codex plugin marketplace add Arnav1906/intern-101 --sparse .agents/plugins --sparse plugins/intern-101-codex
 codex plugin add intern-101@intern-101-codex
 ```
 
-Alternatively, add the marketplace in Codex's `/plugins` browser, choose the
-Intern 101 Codex marketplace, and install Intern 101. Restart an existing session
-if the new skills are not visible.
+Start a new Codex session after installation. Alternatively, browse the configured marketplace through `/plugins` and install Intern 101.
 
-The marketplace points only to `plugins/intern-101-codex/`. Sparse checkout keeps
-the marketplace snapshot limited to its catalog and this package. It does not
-promise selective Git network transfer. The installed plugin contains no Claude
-manifests, agents, session readers, or hooks.
+The marketplace points to `plugins/intern-101-codex/`. Codex manages the installed package in its plugin cache. Sparse checkout limits the marketplace snapshot to the catalog and Codex package; actual Git network transfer depends on Git. The package contains its own skills, references, Python runtime, guide, and license.
 
-Codex manages the installed skill and script files in its plugin cache. These
-files operate against the active project; generated context files remain in that
-project. There is no manual installer or copy into `.agents/skills`.
+## Quick start and skills
 
-## Use
+Run these in your Codex chat while working in the project:
 
 ```text
 $intern-101:intern catch me up
-$intern-101:extract-today
-$intern-101:daily-update
-$intern-101:recall authentication
-$intern-101:status
-$intern-101:wrap-up
+$intern-101:intern save today's sessions
+$intern-101:intern write my daily update
+$intern-101:intern done for today
 ```
 
-`$intern-101:chat-context-extractor` handles one selected session. `$intern-101:project-index-manager`
-organizes sub-project indexes and progress, with a project `AGENTS.md` entry.
-These skills can also activate from matching natural-language requests.
+The dispatcher follows the relevant workflows in order. Save sessions before generating an update, and use wrap-up at the end of work. You can also invoke any skill directly:
 
-New notes contain Summary, Accomplishments, optional Key Decisions & Findings,
-Next Steps, and Files Modified. `chat-contexts/INDEX.md` remains compatible with
-the existing project files. Notes from other tools can be used for catchup and
-recall; new raw history extraction reads Codex only.
+| Invocation | Purpose |
+| --- | --- |
+| `$intern-101:intern` | Route your request to the appropriate skill. |
+| `$intern-101:catchup` | Resume recent saved work and its next steps. |
+| `$intern-101:extract-today` | Save today's new or continued project sessions. |
+| `$intern-101:chat-context-extractor` | Save a selected session; defaults to the latest project session. |
+| `$intern-101:daily-update` | Write an update from today's, yesterday's, or supplied notes. |
+| `$intern-101:recall <query>` | Search saved notes for a topic and recover findings. |
+| `$intern-101:status` | Show sub-project progress and pending work. |
+| `$intern-101:wrap-up` | Review Git changes, optionally commit, and save today's sessions. |
+| `$intern-101:project-index-manager` | Create or maintain project indexes and progress files. |
 
-## Configuration and history compatibility
+Context notes contain Summary, Accomplishments, useful Key Decisions & Findings, Next Steps, and Files Modified when available. `chat-contexts/INDEX.md` remains compatible with existing project notes. Catchup and recall can use saved notes from other agents; new raw-history extraction reads Codex only.
 
-Defaults use `CODEX_HOME`, or `~/.codex`, and save under `chat-contexts/`.
-For a custom location, create `.intern101/config.json` in the project:
+## Configuration and history
+
+### Locations and precedence
+
+No project configuration is required for defaults: history comes from `CODEX_HOME`, or `~/.codex`, and context notes go in `chat-contexts/`.
+
+For custom locations, create `.intern101/config.json` in your project:
 
 ```json
 {
@@ -59,47 +73,76 @@ For a custom location, create `.intern101/config.json` in the project:
 }
 ```
 
-An explicit `--codex-home` helper argument overrides configuration. Relative
-configured paths resolve from the project root. The output directory must remain
-inside that root. A configuration file also identifies the root of a project
-without Git. Otherwise the nearest Git root is used, falling back to the supplied
-directory.
+Set `codex_home` to your actual Codex home path. An explicit helper `--codex-home` argument takes priority over the configured path, followed by `CODEX_HOME` and `~/.codex`. Use `"auto"` to follow the environment/default. Relative configured paths resolve from the project root. The context output directory must remain inside that root.
 
-The reader supports legacy JSONL messages, paginated rollout completion records,
-and compatible read-only `state_*.sqlite` / `thread_history_*.sqlite` schemas.
-The JSONL and SQLite layouts are Codex internals and can change. Unsupported
-sessions are reported as errors, not silently treated as empty. Archived sessions
-are opt-in and subagent histories are excluded from normal project discovery.
-Days are computed using the machine's local timezone and conversation timestamps.
-Repeated extraction skips unchanged conversations; continued sessions produce
-new notes and daily updates use the newest snapshot per session on that date.
+The helper walks up from the working directory to find `.intern101/config.json` or `.git`, using the first matching ancestor; configuration wins when both occur in the same directory. Without either, it uses the supplied directory. Sessions must belong to that root or a descendant directory.
 
-For diagnostics, resolve the plugin path from the loaded skill and run:
+### Project output
 
-```text
+Notes and `INDEX.md` live in the context directory. Prepared JSON and synthesis inputs live under `.intern101/`. Project organization creates a root `_Index.md`, sub-project index/progress files under `projects/`, and an instruction in `AGENTS.md` to read the index. Existing instructions are preserved.
+
+Generated context stays in the project. The runtime opens Codex history files and databases read-only.
+
+### Supported history
+
+The reader supports legacy rollout JSONL messages, paginated completion records, and structurally compatible read-only `state_*.sqlite` / `thread_history_*.sqlite` schemas. These are Codex internals and can change. Unsupported sessions are reported as errors rather than treated as empty.
+
+Archived sessions are opt-in; subagent histories are excluded from normal discovery. Days use the machine's local timezone and conversation timestamps. Unchanged conversations are skipped, continued sessions produce new notes, and daily updates use the latest snapshot per session for the selected date.
+
+### Diagnostics
+
+Resolve the installed plugin root from the loaded skill's location, then run:
+
+```sh
 python "<plugin-root>/scripts/intern101.py" --project "<project-directory>" doctor
 ```
 
-The first release uses explicit wrap-up. No lifecycle hook is automatically
-enabled. Git commit operations require the wrap-up skill's user authorization.
+Use `python3` if that is your available Python executable. Check the reported project root, Codex home, history availability, and configuration when session discovery fails. See [runtime guidance](references/runtime.md) and [synthesis guidance](references/synthesis.md) for the helper workflows.
+
+## Agents and hooks
+
+Codex's dispatcher selects sibling skills, and the active model synthesizes cleaned session snapshots directly. The package does not require Claude's specialist agents or subagent delegation.
+
+The manifest declares an empty hooks object. Save sessions explicitly with `$intern-101:extract-today` or `$intern-101:wrap-up`. Wrap-up reviews Git changes and requires your authorization before committing; pushing is a separate action.
+
+## Uninstall
+
+Run in your terminal:
+
+```sh
+codex plugin remove intern-101@intern-101-codex
+```
+
+This removes the installed plugin and its local cache. You can also uninstall through `/plugins`. Start a new Codex session afterward.
+
+To remove the marketplace source too:
+
+```sh
+codex plugin marketplace remove intern-101-codex
+```
+
+Your Codex history and project files remain, including the context directory, `.intern101/`, `_Index.md`, and sub-project index/progress files. Keep these for reference or another agent. To stop project-specific reminders, remove only the Intern 101 instruction added to `AGENTS.md`. Review notes and helper/configuration files before deleting any you no longer need, preserving unrelated instructions and project work.
+
+See the [official Codex command reference](https://learn.chatgpt.com/docs/developer-commands) for plugin and marketplace management.
 
 ## Local development
 
-From the repository root:
+From the repository checkout root:
 
-```text
+```sh
 codex plugin marketplace add .
 codex plugin add intern-101@intern-101-codex
-python -m unittest discover -s tests/codex -v
 python tools/build_codex.py
 ```
 
-The optional ZIP contains the same standalone Codex plugin for review or public
-submission. The normal user installation route is Marketplace. Adding a custom
-marketplace does not publish this plugin in OpenAI's curated public directory;
-that requires a separate submission.
+Start a new session to load the installed skills. The builder creates a ZIP in `dist/` containing this standalone package, including its guide and MIT license; tests and Claude assets are excluded. Local development commands require the source repository, since the builder is not inside the installed plugin.
 
-The package layout follows the separate Codex manifest and marketplace catalog
-pattern used by [Superpowers](https://github.com/obra/superpowers). References:
-[Codex packaging](https://developers.openai.com/plugins/build/plugins) and
-[Codex skills](https://learn.chatgpt.com/docs/build-skills).
+Marketplace is the normal installation route. Adding this repository's marketplace does not submit the plugin to the public directory; that is a separate publishing process.
+
+## References
+
+The separate manifest and marketplace layout follows the pattern used by [Superpowers](https://github.com/obra/superpowers). Official documentation: [Codex packaging](https://developers.openai.com/plugins/build/plugins), [Codex skills](https://learn.chatgpt.com/docs/build-skills), and [plugin commands](https://learn.chatgpt.com/docs/developer-commands).
+
+## License
+
+[MIT](LICENSE). Copyright (c) 2026 Arnav Bhalla.

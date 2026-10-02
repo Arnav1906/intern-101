@@ -11,7 +11,7 @@ def build(repository, output):
     manifest = json.loads((plugin / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
     destination = output / "intern-101-codex-{}.zip".format(manifest["version"])
     output.mkdir(parents=True, exist_ok=True)
-    files = [plugin / ".codex-plugin" / "plugin.json", plugin / "README.md"]
+    files = [plugin / ".codex-plugin" / "plugin.json", plugin / "README.md", plugin / "LICENSE"]
     for directory, extension in (("skills", ".md"), ("references", ".md"), ("scripts", ".py")):
         files.extend(sorted((plugin / directory).rglob("*" + extension)))
     with ZipFile(destination, "w", ZIP_DEFLATED) as archive:

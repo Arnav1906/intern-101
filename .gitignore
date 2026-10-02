@@ -1,6 +1,6 @@
 docs/superpowers/plans/
 docs/superpowers/specs/
-docs/
+docs/*
 .claude/
 .superpowers/
 __pycache__/
@@ -10,8 +10,6 @@ __pycache__/
 *.zip
 fix.md
 tests/*
-!tests/codex/
-!tests/codex/*.py
 dist/
 .codex-test/
 
