@@ -35,8 +35,10 @@ for defaults. `contexts_dir` must remain inside the project.
 
 Notes and `INDEX.md` are in `chat-contexts/`; progress files are under `projects/`.
 Existing notes from other tools are readable. New extractions have `source: codex`.
-Prepared JSON and synthesis inputs belong under `.intern101/` in the project.
-Do not write into the installed plugin, Codex home, or another project's folder.
+Extraction returns prepared session pages as command output and accepts the
+synthesis on standard input. It does not create prepared or summary JSON files.
+`.intern101/config.json` remains optional. Do not write into the installed
+plugin, Codex home, or another project's folder.
 
 For history access problems run `doctor`. The supported readers handle legacy
 rollouts, paginated completion records, and structurally compatible thread-item

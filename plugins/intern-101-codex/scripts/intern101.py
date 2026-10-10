@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from lib.codex_sessions import discover, local_time, metadata, prepare
-from lib.contexts import already_saved, atomic_write, read_contexts, save
+from lib.contexts import already_saved, read_contexts, save
 from lib.workspace import belongs_to_project, codex_home, config, inside, project_root
 
 
@@ -90,10 +90,15 @@ def main():
     choose.add_argument("--session")
     choose.add_argument("--path")
     clean.add_argument("--include-archived", action="store_true")
-    clean.add_argument("--output", help="write a prepared JSON snapshot inside the project")
-    store = commands.add_parser("save", help="save synthesized notes from a prepared snapshot")
-    store.add_argument("--prepared", required=True)
-    store.add_argument("--input", required=True, help="JSON with title, summary, accomplishments, decisions, next_steps")
+    clean.add_argument("--offset", type=int, default=0, help="first turn to return")
+    clean.add_argument("--limit", type=int, default=10, help="maximum turns to return")
+    store = commands.add_parser("save", help="save synthesized notes without intermediate files")
+    store_choice = store.add_mutually_exclusive_group(required=True)
+    store_choice.add_argument("--session")
+    store_choice.add_argument("--path")
+    store.add_argument("--include-archived", action="store_true")
+    store.add_argument("--expected-fingerprint", required=True)
+    store.add_argument("--input", required=True, choices=["-"], help="read synthesis JSON from standard input")
     history = commands.add_parser("catchup")
     history.add_argument("--limit", type=int, default=5)
     recall = commands.add_parser("recall")
@@ -110,20 +115,24 @@ def main():
     operation.add_argument("--commit", metavar="MESSAGE")
     args = parser.parse_args()
     root = project_root(args.project)
-    if args.command in {"sessions", "prepare", "doctor"}:
+    if args.command in {"sessions", "prepare", "save", "doctor"}:
         home = codex_home(root, args.codex_home)
     if args.command == "sessions":
         result = session_list(args, root, home)
     elif args.command == "prepare":
         result = prepare(select_session(args, root, home), home, root)
-        if args.output:
-            output = inside(root, root / args.output)
-            atomic_write(output, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
-            result = {"prepared": str(output), "session_id": result["session_id"], "turns": len(result["turns"])}
+        if args.offset < 0 or args.limit < 1:
+            raise ValueError("offset must be non-negative and limit must be positive")
+        turns = result["turns"]
+        result["turns"] = turns[args.offset:args.offset + args.limit]
+        result["total_turns"] = len(turns)
+        result["offset"] = args.offset
+        result["next_offset"] = args.offset + args.limit if args.offset + args.limit < len(turns) else None
     elif args.command == "save":
-        snapshot = inside(root, root / args.prepared)
-        summary_path = inside(root, root / args.input)
-        result = save(root, json.loads(snapshot.read_text(encoding="utf-8")), json.loads(summary_path.read_text(encoding="utf-8")))
+        snapshot = prepare(select_session(args, root, home), home, root)
+        if snapshot["fingerprint"] != args.expected_fingerprint:
+            raise ValueError("Session changed since preparation; read it again before saving")
+        result = save(root, snapshot, json.load(sys.stdin))
     elif args.command == "catchup":
         result = {"sessions": read_contexts(root)[:max(0, args.limit)]}
     elif args.command == "recall":

@@ -137,7 +137,7 @@ The configuration file or Git repository identifies the project root; otherwise 
 | `chat-contexts/` | Saved Markdown session notes and their `INDEX.md`. Codex can use a configured context directory instead. |
 | `_Index.md` | Root index linking work domains and shared files. |
 | `projects/<name>/` | Sub-project index and progress files alongside any agreed project organization. |
-| `.intern101/` | Project-local helpers for Claude; configuration and prepared/synthesis inputs for Codex. |
+| `.intern101/` | Project-local helpers for Claude; optional `config.json` for Codex. Codex extraction creates no intermediate JSON here. |
 | `CLAUDE.md` / `AGENTS.md` | Instructions to load project indexes in the relevant agent. |
 
 Context notes record summaries, accomplishments, useful decisions, next steps, and modified files when available. Both agents can read compatible saved notes; each new extraction reads its own agent's raw history. Codex reads history files and databases without modifying them.

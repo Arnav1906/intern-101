@@ -79,7 +79,9 @@ The helper walks up from the working directory to find `.intern101/config.json` 
 
 ### Project output
 
-Notes and `INDEX.md` live in the context directory. Prepared JSON and synthesis inputs live under `.intern101/`. Project organization creates a root `_Index.md`, sub-project index/progress files under `projects/`, and an instruction in `AGENTS.md` to read the index. Existing instructions are preserved.
+Notes and `INDEX.md` live in the context directory. Extraction exchanges session pages and syntheses through command output and standard input; it does not save intermediate JSON. `.intern101/config.json` is optional. Project organization creates a root `_Index.md`, sub-project index/progress files under `projects/`, and an instruction in `AGENTS.md` to read the index. Existing instructions are preserved.
+
+Older versions may have left `.intern101/prepared/` and `.intern101/summaries/` in a project. This version does not use or delete them. Review the saved notes before removing those older files.
 
 Generated context stays in the project. The runtime opens Codex history files and databases read-only.
 
@@ -101,7 +103,7 @@ Use `python3` if that is your available Python executable. Check the reported pr
 
 ## Agents and hooks
 
-Codex's dispatcher selects sibling skills, and the active model synthesizes cleaned session snapshots directly. The package does not require Claude's specialist agents or subagent delegation.
+Codex's dispatcher selects sibling skills, and the active model synthesizes cleaned session pages directly. The package does not require Claude's specialist agents or subagent delegation.
 
 The manifest declares an empty hooks object. Save sessions explicitly with `$intern-101:extract-today` or `$intern-101:wrap-up`. Wrap-up reviews Git changes and requires your authorization before committing; pushing is a separate action.
 
