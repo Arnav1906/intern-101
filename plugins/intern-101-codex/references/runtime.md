@@ -1,46 +1,54 @@
 # Runtime and project files
 
-Resolve the plugin root from the loaded skill's absolute path: `skills/<name>/SKILL.md`
-is two directories below the plugin root. Its helper is `scripts/intern101.py`.
-Use that installed helper, even when it lives in Codex's plugin cache. Do not
-search the user's project for the plugin source or use another CLI's plugin root.
+Resolve `<plugin-root>` from the loaded skill's absolute installed path:
+`skills/<name>/SKILL.md` is two directories below the plugin root. Run the
+original-named helper in that root's `scripts/` directory from the user's
+project working directory. Use the installed package, including when it lives
+in Codex's plugin cache; do not search the project for a source checkout or use
+another CLI's plugin root.
 
-Commands work in PowerShell and POSIX shells:
+The command paths in the skills use this binding:
 
 ```text
-python "<plugin-root>/scripts/intern101.py" --project "<working-directory>" <command>
+python "<plugin-root>/scripts/catchup.py" 2>&1
 ```
 
 Use `python3` if that is the available Python executable. Python 3.9+ is required;
-there are no third-party dependencies. Helpers return JSON. A nonzero exit with
-`error` means report the error; do not interpret it as an empty session list.
+there are no third-party runtime dependencies. Keep each skill's command
+arguments and output/error handling. Bind `{{ arguments }}` to the user's
+supplied arguments for that skill invocation; retain its meaning in each step.
 
-The helper resolves a project root using `.intern101/config.json`, then `.git`,
-then the supplied directory. All skills should use the same resolved root.
-Session metadata must identify that root or a descendant directory. Only Codex
-history is read. Session files and databases are opened read-only.
+The history helpers resolve the project from optional `.intern101/config.json`,
+then `.git`, then the working directory. Codex home uses the configured
+`codex_home` override, then `CODEX_HOME`, then `~/.codex`. Only Codex history is
+read, and session files and databases are opened read-only. Report an unsupported
+history format or missing usable rollout file as an error.
 
-Optional project configuration at `.intern101/config.json`:
+`latest_session.py` returns the latest matching actual rollout path.
+`chat_context_extractor.py "<path>"` returns one complete cleaned-session JSON
+object with the original fields, including `turns`, `files_modified`,
+`project_root`, `total_user`, and `total_assistant`. `extract_today.py` returns
+today's new sessions with their paths, UUIDs, times, and file sizes. No prompt
+paging loop or persistent prepared/synthesis JSON files is part of this workflow.
 
-```json
-{
-  "codex_home": "auto",
-  "contexts_dir": "chat-contexts"
-}
-```
+## Native delegation
 
-`codex_home` uses the configured override, then `CODEX_HOME`, then `~/.codex`.
-It can be an absolute path or a path relative to the project. No config is needed
-for defaults. `contexts_dir` must remain inside the project.
+Read the packaged `agents/chat-context-extractor.md` verbatim and pass its
+instructions to a native Codex subagent together with the complete cleaned
+session JSON and the prefix prescribed by the skill. Keep host execution wiring
+here; the packaged agent owns synthesis, document format, index updates, and its
+confirmation block. See the [synthesis reference](synthesis.md).
 
-Notes and `INDEX.md` are in `chat-contexts/`; progress files are under `projects/`.
-Existing notes from other tools are readable. New extractions have `source: codex`.
-Extraction returns prepared session pages as command output and accepts the
-synthesis on standard input. It does not create prepared or summary JSON files.
-`.intern101/config.json` remains optional. Do not write into the installed
-plugin, Codex home, or another project's folder.
+Native subagents inherit the configured Codex model settings. Do not select a
+model from the preserved Claude frontmatter or introduce a hardcoded OpenAI
+model. For batch extraction, create one subagent task per confirmed session,
+respect the host's concurrency limit, and collect every confirmation block.
+If a slot is unavailable, wait for an active task before dispatching the next.
 
-For history access problems run `doctor`. The supported readers handle legacy
-rollouts, paginated completion records, and structurally compatible thread-item
-databases. These storage formats can change between Codex releases. Report an
-unsupported format explicitly rather than inventing a summary.
+If native subagent tooling is unavailable, report the unmet delegation
+requirement and stop. Do not synthesize in the parent or claim delegated success.
+
+Saved Markdown context notes in the project can be read regardless of which
+supported CLI produced them. The synthesis agent writes `chat-contexts/` and
+`chat-contexts/INDEX.md` according to its packaged instructions. Do not write
+into the installed plugin or Codex history.

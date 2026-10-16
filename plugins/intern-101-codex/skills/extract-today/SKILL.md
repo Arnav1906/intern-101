@@ -1,21 +1,105 @@
 ---
 name: extract-today
-description: Save today's new or continued Codex sessions for the current project as structured Markdown context notes.
+description: Use when the user wants to save all of today's Claude sessions as context documents, says "extract today's sessions", or types /extract-today.
+user_invocable: true
+origin: intern-101
+model: sonnet
+allowed-tools: [Read, Write, Bash]
 ---
 
-Read [runtime guidance](../../references/runtime.md).
+# /extract-today — Batch Extract All New Sessions for Today
 
-1. Run `sessions --today --new`. Present session IDs, times, and previews. Report
-   any errors separately; an unreadable session is not an already extracted one.
-2. If the user already requested saving all today's sessions, proceed with those
-   sessions. Otherwise ask which sessions to include. No matches means nothing
-   new to save.
-3. For each selected session run `prepare --session "<id>" --offset 0`.
-   Read every page using `next_offset` until it is null. If the fingerprint
-   changes between pages, restart that session from offset 0. Do not skip pages
-   or write the returned JSON to a file.
-4. Follow [synthesis guidance](../../references/synthesis.md) directly in Codex.
-   Feed each synthesis to `save` on standard input and save sequentially. If
-   `save` reports that the session changed, reread and resynthesize it. The
-   workflow does not require subagents.
-5. Report saved paths, skipped unchanged sessions, and any failures.
+## Step 1 — Find today's new sessions
+
+Resolve `<plugin-root>` from the loaded skill path as described in the [runtime reference](../../references/runtime.md).
+
+```bash
+python "<plugin-root>/scripts/extract_today.py" 2>&1
+```
+
+Parse the output as JSON.
+
+- `ERROR:` → report and stop.
+- `[]` → "No new sessions found for today. All `.jsonl` files are already extracted or none exist." Stop.
+
+## Step 2 — Present list and ask for confirmation
+
+```
+Found N new session(s) from today:
+
+  #  Time   Size    UUID
+  1  09:14  42 KB   f4fa97f5-...
+  2  11:30  18 KB   9d5fbcf9-...
+
+Extract all? Or enter numbers to skip (e.g. "skip 2"):
+```
+
+**Wait for answer before proceeding.**
+
+- "yes" / "all" / enter → process all
+- "skip N" → remove N and process rest
+- "no" / "cancel" → stop
+
+Flag any session under 5 KB: "Session #N is very small (X KB). Include anyway?"
+
+## Step 3 — Phase 1: Parse each confirmed session
+
+For each confirmed session, run:
+
+```bash
+python "<plugin-root>/scripts/chat_context_extractor.py" "<jsonl_path>" 2>&1
+```
+
+Parse the last non-empty line of stdout as JSON.
+If a session returns `ERROR:` → report it and skip.
+
+You now have one JSON object per session with this schema:
+```json
+{
+  "session_id": "str",
+  "custom_title": "str",
+  "model": "str",
+  "date": "YYYY-MM-DD",
+  "first_ts": "str",
+  "last_ts": "str",
+  "turns": [
+    {"role": "user",      "hhmm": "HH:MM", "text": "str"},
+    {"role": "assistant", "hhmm": "HH:MM", "text": "str", "tools": ["str"]}
+  ],
+  "files_modified": ["str"],
+  "session_count": 1,
+  "project_root": "str",
+  "total_user": 0,
+  "total_assistant": 0
+}
+```
+
+Verify `turns` is non-empty; if not, report and skip that session.
+
+## Step 4 — Phase 2: Dispatch synthesis agents
+
+Read the packaged `agents/chat-context-extractor.md` and pass its instructions to one native Codex subagent **per session simultaneously**, together with that session's cleaned JSON. Respect the host's concurrency limit; dispatch the next task when a slot is available.
+
+For each session, pass the full lean JSON from Step 3 as the agent's prompt, prefixed with:
+
+> Synthesize a context document from this cleaned session JSON and write it to disk. JSON: `<paste full JSON here>`
+
+Wait for all agents to complete. Each agent writes its own `.md` file and updates INDEX.md — no manual file writing needed.
+
+## Step 5 — Summary
+
+Collect the confirmation blocks returned by each agent. Report:
+
+```
+Extracted N session(s) for <today>:
+  <confirmation block from agent 1>
+  <confirmation block from agent 2>
+
+INDEX.md updated.
+```
+
+## Notes
+
+- Sessions matched as "new" by UUID not appearing in existing frontmatter `session_id` fields.
+- Files < 5 KB are likely metadata-only — flag: "Session #N is very small (X KB). Include anyway?"
+- Only processes today's files. For older sessions, use `chat-context-extractor` directly with a path.

@@ -1,17 +1,77 @@
 ---
 name: wrap-up
-description: Finish a work session by reviewing project Git changes, optionally committing them, and saving today's Codex context notes.
+description: Use when the user says they are done for the day — "I'm done", "wrapping up", "done for today", "signing off", "that's it for today", "I'm finished", "end of day". Checks git status, prompts to commit if needed, then runs session extraction.
+origin: intern-101
+user-invocable: true
+model: sonnet
+allowed-tools: [Read, Bash]
 ---
 
-Read [runtime guidance](../../references/runtime.md). Run `wrap-up` to check Git.
+# /wrap-up — End-of-Day Wrap-Up
 
-For DIRTY, show changes and offer commit, skip commit, or cancel unless the user
-already specified a choice. Before committing, run `wrap-up --diff-stat`, review
-what will be included, and obtain or derive a commit message from the authorized
-changes. Only then run `wrap-up --commit "<message>"`. It stages tracked changes
-with `git add -u`; identify untracked files for the user to include explicitly.
-Do not push as part of this workflow.
+Checks git status, optionally commits, then hands off to `/extract-today` for session extraction.
 
-For CLEAN or NO_REPO, continue with the sibling extract-today skill. If a commit
-fails, report the failure and let the user choose retry or extraction without a
-commit. Report the commit result and saved context paths.
+---
+
+## Step 1 — Git repo check
+
+Resolve `<plugin-root>` from the loaded skill path as described in the [runtime reference](../../references/runtime.md).
+
+```bash
+python "<plugin-root>/scripts/wrap_up.py" --check
+```
+
+- `NO_REPO` → skip to Step 3
+- `CLEAN` → skip to Step 3
+- Starts with `DIRTY:` → the rest of the line contains the branch name and changed file list. Proceed to Step 2.
+
+---
+
+## Step 2 — Uncommitted changes: ask user
+
+Show the changed files from the `DIRTY:` output and present this exact choice:
+
+```
+You have uncommitted changes on branch `<branch>`:
+<file list>
+
+Commit before extracting today's sessions?
+  y) Yes — commit now
+  n) No  — skip and extract anyway
+  c) Cancel — stop here
+```
+
+**Wait for user answer.**
+
+- `c` → stop. Say: "Ok, come back when ready."
+- `n` → skip to Step 3
+- `y` → proceed to Step 2b
+
+---
+
+## Step 2b — Built-in commit flow
+
+```bash
+python "<plugin-root>/scripts/wrap_up.py" --diff-stat
+```
+
+Show the output (changed files summary). Then:
+
+1. Ask: "Commit message? (or press enter to use: `chore: end-of-day checkpoint`)"
+2. Use the provided message, or the default if blank.
+3. Run:
+
+```bash
+python "<plugin-root>/scripts/wrap_up.py" --commit "<message>"
+```
+
+- Starts with `COMMITTED:<hash>` → confirm: "Committed `<hash>`." → proceed to Step 3
+- Starts with `FAILED:<reason>` → show the error. Ask: "Fix and retry, or skip commit and extract anyway? [retry/skip]"
+  - `retry` → return to the top of Step 2b
+  - `skip` → proceed to Step 3
+
+---
+
+## Step 3 — Extract today's sessions
+
+Run `/extract-today` to save today's sessions with agent-generated summaries.

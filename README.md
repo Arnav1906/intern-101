@@ -33,11 +33,11 @@ Run the commands for your agent in a terminal.
 ### Claude Code
 
 ```sh
-claude plugin marketplace add Arnav1906/intern-101
-claude plugin install intern-101@intern-101 --scope user
+claude plugin marketplace add Arnav1906/intern-101 --sparse .claude-plugin plugins/intern-101-claude
+claude plugin install intern-101@intern-101
 ```
 
-This installs the plugin for your user account. For a repository-wide or local-only installation, run from that project and replace `--scope user` with `--scope project` or `--scope local`. Start a new Claude Code session after installing.
+For a repository-wide or local-only installation, run from that project and add `--scope project` or `--scope local` to the install command. Start a new Claude Code session after installing.
 
 ### Codex
 
@@ -47,6 +47,10 @@ codex plugin add intern-101@intern-101-codex
 ```
 
 The Codex marketplace installs the standalone package under `plugins/intern-101-codex/`. Start a new Codex session after installing. You can also browse the configured marketplace through `/plugins`.
+
+Each catalog selects its own complete runtime: Claude uses `plugins/intern-101-claude/`; Codex uses `plugins/intern-101-codex/`. Neither installed package requires the sibling package or repository-root helpers. Sparse checkout may retain top-level files and ancestor metadata, and does not guarantee that Git objects for other paths never transfer over the network.
+
+Older marketplace and installed caches do not adopt this layout automatically. Refresh the marketplace and update or reinstall the plugin, then start a fresh session. Existing full checkouts require removing and re-adding the marketplace with the sparse command above to change the checkout selection. See the [Claude guide](plugins/intern-101-claude/README.md#existing-installations) and [Codex guide](plugins/intern-101-codex/README.md#existing-installations) for cache migration.
 
 See the [Codex guide](plugins/intern-101-codex/README.md) for history compatibility, diagnostics, and local installation. The [Claude plugin guide](https://code.claude.com/docs/en/discover-plugins) and [Codex command reference](https://learn.chatgpt.com/docs/developer-commands) describe the native plugin commands.
 
@@ -82,7 +86,7 @@ Both installations provide these nine skills. The `intern` dispatcher selects th
 | --- | --- | --- | --- |
 | `intern` | Route a natural-language request to the relevant skill. | `/intern-101:intern` | `$intern-101:intern` |
 | `catchup` | Resume from recent saved sessions, decisions, and next steps. | `/intern-101:catchup` | `$intern-101:catchup` |
-| `extract-today` | Save today's new project sessions as context notes. Codex also detects continued sessions. | `/intern-101:extract-today` | `$intern-101:extract-today` |
+| `extract-today` | Save today's new project sessions as context notes. | `/intern-101:extract-today` | `$intern-101:extract-today` |
 | `chat-context-extractor` | Save one selected session; defaults to the latest project session. | `/intern-101:chat-context-extractor` | `$intern-101:chat-context-extractor` |
 | `daily-update` | Write a concise supervisor update from saved sessions or supplied notes. | `/intern-101:daily-update` | `$intern-101:daily-update` |
 | `recall` | Find saved work about a topic and recover useful findings. | `/intern-101:recall <query>` | `$intern-101:recall <query>` |
@@ -148,18 +152,18 @@ Claude Code includes two specialist agents:
 
 | Agent | Role and reason for inclusion |
 | --- | --- |
-| [`session-manager`](agents/session-manager.md) | Coordinates catchup, recall, status, and daily-update workflows, choosing how much context to load and which skills to chain. |
-| [`chat-context-extractor`](agents/chat-context-extractor.md) | Turns cleaned session JSON into a structured note and updates indexes. Keeping synthesis separate lets the extractor skill handle transcript discovery and cleaning before handing over the relevant conversation. |
+| [`session-manager`](plugins/intern-101-claude/agents/session-manager.md) | Coordinates catchup, recall, status, and daily-update workflows, choosing how much context to load and which skills to chain. |
+| [`chat-context-extractor`](plugins/intern-101-claude/agents/chat-context-extractor.md) | Turns cleaned session JSON into a structured note and updates indexes. Keeping synthesis separate lets the extractor skill handle transcript discovery and cleaning before handing over the relevant conversation. |
 
 The extractor **skill** prepares the input and invokes the extractor **agent**. The agent summarizes that input directly, avoiding a recursive call back to the skill.
 
-Codex performs routing and synthesis through its own skills and Python helper. Its standalone package uses the active Codex model and does not require these Claude agents or subagent delegation.
+Codex preserves the original nine skill workflows. Its adapter entry points return the original helper contracts; the extractor delegates the verbatim packaged synthesis prompt and complete cleaned session JSON to native Codex subagents. Subagents inherit configured model settings. If native delegation is unavailable, extraction reports the requirement and stops.
 
 ## Hooks
 
 ### Claude Code: bundled Stop reminder
 
-Claude loads the hook from [`hooks/hooks.json`](hooks/hooks.json) with the installed plugin. Its configuration is:
+Claude loads the hook from [`hooks/hooks.json`](plugins/intern-101-claude/hooks/hooks.json) with the installed plugin. Its configuration is:
 
 ```json
 {
@@ -224,26 +228,23 @@ Your agent session history, saved notes, indexes, progress files, and `.intern10
 
 ## Development and architecture
 
-The root contains the Claude package; the Codex package is self-contained:
+The root contains development tools and two marketplace catalogs. Each runtime is self-contained:
 
 ```text
 intern-101/
-  .claude-plugin/                 Claude manifest and marketplace
-  skills/                        Nine Claude skills
-  agents/                        Claude workflow and synthesis agents
-  rules/                         Claude output and file-operation guidance
-  hooks/                         Claude Stop hook configuration and scripts
-  scripts/                       Claude Python helpers
+  .claude-plugin/marketplace.json
   .agents/plugins/marketplace.json
+  plugins/intern-101-claude/
+    .claude-plugin/plugin.json
+    skills/  agents/  rules/  hooks/  scripts/
+    README.md  LICENSE
   plugins/intern-101-codex/
-    .codex-plugin/plugin.json    Codex manifest
-    skills/                      Nine Codex skills
-    references/                  Runtime and synthesis instructions
-    scripts/                     Codex Python CLI and history readers
-    README.md
-    LICENSE
-  tools/build_codex.py           Codex ZIP builder
-  LICENSE
+    .codex-plugin/plugin.json
+    skills/  agents/  references/  scripts/
+    README.md  LICENSE
+  tools/build_codex.py
+  package.json
+  README.md  LICENSE
 ```
 
 Skills describe the workflow; Python helpers handle history and file operations, and the host model synthesizes the summaries. Claude resolves helpers through `CLAUDE_PLUGIN_ROOT`; Codex resolves them from its installed skill location.
@@ -254,7 +255,7 @@ From the repository root, build the standalone Codex ZIP:
 python tools/build_codex.py
 ```
 
-The archive in `dist/` includes the Codex manifest, skills, references, runtime, guide, and MIT license. Tests and Claude assets are excluded. See the [Codex development guide](plugins/intern-101-codex/README.md#local-development) for local Marketplace installation. The guides document the current implementation; additional CLI agents are not yet supported.
+The archive in `dist/` includes the Codex manifest, skills, packaged synthesis agents, references, runtime, guide, and MIT license. The Codex ZIP excludes tests and Claude assets. The npm package includes the complete relocated Claude runtime and excludes Codex. See the [Codex development guide](plugins/intern-101-codex/README.md#local-development) for local Marketplace installation. The guides document the current implementation; additional CLI agents are not yet supported.
 
 ## Author
 

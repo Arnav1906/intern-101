@@ -1,6 +1,6 @@
 ---
 name: intern
-description: Main dispatcher for intern-101. Use when the user types /intern or says anything that maps to intern-101 capabilities: session catchup, daily updates, project status, session extraction, or end-of-day wrap-up.
+description: "Main dispatcher for intern-101. Use when the user types /intern or says anything that maps to intern-101 capabilities: session catchup, daily updates, project status, session extraction, or end-of-day wrap-up."
 origin: intern-101
 user-invocable: true
 allowed-tools: [Read, Bash]

@@ -1,22 +1,56 @@
 ---
 name: intern
-description: Route requests for session catchup, daily work updates, saved chat context, recall, project status, organization, or end-of-day wrap-up through Intern 101.
+description: "Main dispatcher for intern-101. Use when the user types /intern or says anything that maps to intern-101 capabilities: session catchup, daily updates, project status, session extraction, or end-of-day wrap-up."
+origin: intern-101
+user-invocable: true
+allowed-tools: [Read, Bash]
+model: haiku
 ---
 
-Read [runtime guidance](../../references/runtime.md), then read the matching
-sibling skill's `SKILL.md` and follow its workflow.
+# /intern — Dispatcher
 
-| User intent | Skill folder |
+Routes natural language to the right intern-101 skill.
+
+## When to Activate
+
+Trigger on `/intern` or any phrase like:
+
+- "where was I", "catch me up", "what was I working on", "let's resume"
+- "write my daily update", "what did I do today", "status report for my supervisor"
+- "extract today", "save today's sessions"
+- "find sessions about X", "did we work on X before", "recall X"
+- "show me project status", "what's the state of everything"
+- "set up indexes", "organize the project", "project index"
+- "I'm done", "done for today", "wrapping up", "signing off", "that's it for today", "I'm finished", "end of day"
+
+## Routing Table
+
+Identify the user's intent and invoke the corresponding skill:
+
+| Intent | Skill |
 |---|---|
-| Resume work or ask where they stopped | `catchup` |
-| Save today's Codex sessions | `extract-today` |
-| Extract a specific session | `chat-context-extractor` |
-| Write a daily work update | `daily-update` |
-| Find previous work about a topic | `recall` |
-| Review sub-project progress | `status` |
-| Organize project indexes | `project-index-manager` |
-| Finish work for the day | `wrap-up` |
+| "catchup", "where was I", "last session", "resume" | invoke `catchup` skill |
+| "daily update", "status report", "what did I do today" | invoke `daily-update` skill |
+| "extract today", "save today's sessions" | invoke `extract-today` skill |
+| "recall", "find session", "did we work on X" | invoke `recall` skill |
+| "status", "all projects", "project overview" | invoke `status` skill |
+| "project index", "organize projects", "set up index" | invoke `project-index-manager` skill |
+| "I'm done", "done for today", "wrapping up", "signing off", "that's it for today", "I'm finished", "end of day" | invoke `wrap-up` skill |
 
-For a combined request, follow the relevant workflows in order. Saving sessions
-precedes generating an update from them. If intent is ambiguous, give a short
-list of relevant choices.
+## Fallback
+
+If the intent does not clearly map to any of the above, list the available skills and ask the user to clarify:
+
+```
+I can help with:
+
+  /catchup            — resume from your last session
+  /daily-update       — generate a supervisor status update
+  /extract-today      — save today's Claude sessions as context docs
+  /recall <query>     — find past sessions about a topic
+  /status             — overview of all sub-project statuses
+  /project-index-manager — organize a project into indexed sub-projects
+  /wrap-up            — end-of-day git check + session extraction
+
+What would you like to do?
+```

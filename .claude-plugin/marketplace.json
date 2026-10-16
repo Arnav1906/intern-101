@@ -11,9 +11,8 @@
   "plugins": [
     {
       "name": "intern-101",
-      "source": "./",
-      "description": "5 skills for working professionals using Claude Code: organize projects with index/progress files, auto-extract session context, resume from last session, batch-extract today's sessions, and generate plain-language daily updates.",
-      "version": "1.0.0",
+      "source": "./plugins/intern-101-claude",
+      "description": "Nine skills for Claude Code: route requests, resume and recall saved work, extract session context, save today's sessions, write daily updates, organize projects, inspect progress, and wrap up work.",
       "author": {
         "name": "Arnav Bhalla"
       },

@@ -16,7 +16,7 @@ A standalone Codex Marketplace plugin for saving session context, resuming work,
 
 ## Requirements
 
-Codex with plugin Marketplace support and Python **3.9+**. The runtime uses the standard library, with no pip dependencies or separate plugin API key. Sign in to Codex as usual; Codex uses its active model to synthesize summaries. Windows, macOS, and Linux are supported.
+Codex with plugin Marketplace support and Python **3.9+**. The runtime uses the standard library, with no pip dependencies or separate plugin API key. Sign in to Codex as usual. Native synthesis subagents inherit the configured Codex model settings. Windows, macOS, and Linux are supported.
 
 ## Installation
 
@@ -29,7 +29,20 @@ codex plugin add intern-101@intern-101-codex
 
 Start a new Codex session after installation. Alternatively, browse the configured marketplace through `/plugins` and install Intern 101.
 
-The marketplace points to `plugins/intern-101-codex/`. Codex manages the installed package in its plugin cache. Sparse checkout limits the marketplace snapshot to the catalog and Codex package; actual Git network transfer depends on Git. The package contains its own skills, references, Python runtime, guide, and license.
+The marketplace points to `plugins/intern-101-codex/`. Codex manages the installed package in its plugin cache. Sparse checkout limits the marketplace snapshot to the catalog and Codex package; actual Git network transfer depends on Git. The package contains its own nine original skills, packaged synthesis instructions, references, Python runtime, guide, and license. It requires neither the Claude package nor former repository-root runtime directories.
+
+## Existing installations
+
+Refresh the marketplace and reinstall the plugin to adopt version 3.1.2 and its complete package layout. Existing caches are not rewritten by a source update. For an older full marketplace checkout, remove and re-add the marketplace with the documented sparse selection:
+
+```sh
+codex plugin remove intern-101@intern-101-codex
+codex plugin marketplace remove intern-101-codex
+codex plugin marketplace add Arnav1906/intern-101 --sparse .agents/plugins --sparse plugins/intern-101-codex
+codex plugin add intern-101@intern-101-codex
+```
+
+Start a fresh Codex session after reinstalling. Saved project notes and Codex history are separate from these plugin caches.
 
 ## Quick start and skills
 
@@ -48,7 +61,7 @@ The dispatcher follows the relevant workflows in order. Save sessions before gen
 | --- | --- |
 | `$intern-101:intern` | Route your request to the appropriate skill. |
 | `$intern-101:catchup` | Resume recent saved work and its next steps. |
-| `$intern-101:extract-today` | Save today's new or continued project sessions. |
+| `$intern-101:extract-today` | Save today's new project sessions. |
 | `$intern-101:chat-context-extractor` | Save a selected session; defaults to the latest project session. |
 | `$intern-101:daily-update` | Write an update from today's, yesterday's, or supplied notes. |
 | `$intern-101:recall <query>` | Search saved notes for a topic and recover findings. |
@@ -79,7 +92,7 @@ The helper walks up from the working directory to find `.intern101/config.json` 
 
 ### Project output
 
-Notes and `INDEX.md` live in the context directory. Extraction exchanges session pages and syntheses through command output and standard input; it does not save intermediate JSON. `.intern101/config.json` is optional. Project organization creates a root `_Index.md`, sub-project index/progress files under `projects/`, and an instruction in `AGENTS.md` to read the index. Existing instructions are preserved.
+Notes and `INDEX.md` live in the context directory. Extraction passes the complete cleaned-session JSON to a native synthesis subagent; it does not save intermediate JSON or introduce a prompt paging loop. `.intern101/config.json` is optional. Project organization creates a root `_Index.md`, sub-project index/progress files under `projects/`, and an instruction in `AGENTS.md` to read the index. Existing instructions are preserved.
 
 Older versions may have left `.intern101/prepared/` and `.intern101/summaries/` in a project. This version does not use or delete them. Review the saved notes before removing those older files.
 
@@ -89,7 +102,7 @@ Generated context stays in the project. The runtime opens Codex history files an
 
 The reader supports legacy rollout JSONL messages, paginated completion records, and structurally compatible read-only `state_*.sqlite` / `thread_history_*.sqlite` schemas. These are Codex internals and can change. Unsupported sessions are reported as errors rather than treated as empty.
 
-Archived sessions are opt-in; subagent histories are excluded from normal discovery. Days use the machine's local timezone and conversation timestamps. Unchanged conversations are skipped, continued sessions produce new notes, and daily updates use the latest snapshot per session for the selected date.
+Archived sessions are opt-in; subagent histories are excluded from normal discovery. Days use the machine's local timezone and conversation timestamps. The original extraction workflow skips session UUIDs already represented in compatible saved Markdown notes. Daily updates read the selected day's saved notes.
 
 ### Diagnostics
 
@@ -103,7 +116,7 @@ Use `python3` if that is your available Python executable. Check the reported pr
 
 ## Agents and hooks
 
-Codex's dispatcher selects sibling skills, and the active model synthesizes cleaned session pages directly. The package does not require Claude's specialist agents or subagent delegation.
+Codex preserves the original nine prompts and their descriptions, workflow order, examples, choices, confirmation steps, and output templates. Original-named adapter entry points return the original helper contracts using Codex history. The extractor reads the verbatim packaged `agents/chat-context-extractor.md` and delegates those instructions with complete cleaned-session JSON to a native Codex subagent, one per confirmed session. Native subagents inherit configured model settings. If delegation is unavailable, extraction reports the requirement and stops.
 
 The manifest declares an empty hooks object. Save sessions explicitly with `$intern-101:extract-today` or `$intern-101:wrap-up`. Wrap-up reviews Git changes and requires your authorization before committing; pushing is a separate action.
 
@@ -137,7 +150,7 @@ codex plugin add intern-101@intern-101-codex
 python tools/build_codex.py
 ```
 
-Start a new session to load the installed skills. The builder creates a ZIP in `dist/` containing this standalone package, including its guide and MIT license; tests and Claude assets are excluded. Local development commands require the source repository, since the builder is not inside the installed plugin.
+Start a new session to load the installed skills. The builder creates a ZIP in `dist/` containing this standalone package, including its packaged synthesis agents, guide, and MIT license; tests and Claude assets are excluded. Local development commands require the source repository, since the builder is not inside the installed plugin.
 
 Marketplace is the normal installation route. Adding this repository's marketplace does not submit the plugin to the public directory; that is a separate publishing process.
 

@@ -1,20 +1,65 @@
 ---
 name: chat-context-extractor
-description: Extract a selected Codex session or rollout path into a structured project context note; defaults to the latest project session.
+description: Reads a Claude Code .jsonl session transcript and produces a structured, searchable markdown context document. When no path is given, auto-locates the most recent session from ~/.codex/sessions/ for the current working directory. Works on Windows, macOS, and Linux.
+user_invocable: true
+model: sonnet
 ---
 
-Read [runtime guidance](../../references/runtime.md).
+# Chat Context Extractor
 
-Use `prepare --session "<id>"` for a session ID or `prepare --path "<rollout>"`
-for an explicit JSONL path. Without a selection, list `sessions` and choose the
-latest entry. `--include-archived` is available for an explicitly requested
-archived session.
+Processes a Claude Code `.jsonl` session into a condensed context document.
 
-Read the selected session with `prepare --offset 0`, then continue with each
-`next_offset` until it is null. Keep the selection and fingerprint consistent
-across pages; restart if the session changes. Do not write the returned JSON to
-a file. Follow [synthesis guidance](../../references/synthesis.md), feeding the
-synthesis to `save` on standard input. If `save` reports a changed session,
-reread and resynthesize it.
-Report the saved file path. If the session belongs to another project, explain
-the mismatch and use the intended project explicitly only when requested.
+## Input
+
+Path optionally provided via `{{ arguments }}`.
+
+- **Path given:** use it directly.
+- **No path:** run Step 0 to auto-locate the latest session.
+
+---
+
+## Step 0 — Auto-Locate Latest Session (only when no path given)
+
+```bash
+python "<plugin-root>/scripts/latest_session.py" 2>&1
+```
+
+Parse last non-empty line. If `ERROR:` → report and stop.
+
+---
+
+## Step 1 — Clean the Transcript
+
+Run the cleaner (substitute the resolved path for `<path>`).
+
+Resolve `<plugin-root>` from the loaded skill path as described in the [runtime reference](../../references/runtime.md).
+
+```bash
+python "<plugin-root>/scripts/chat_context_extractor.py" "<path>" 2>&1
+```
+
+Parse the last non-empty line of stdout as JSON.
+If the line starts with `ERROR:` → report the error and stop.
+If `turns` is empty → report "metadata-only or corrupted session" and stop.
+
+---
+
+## Step 2 — Dispatch Synthesis Agent
+
+Read the packaged `agents/chat-context-extractor.md` and pass its instructions
+to a Codex subagent together with the cleaned session JSON.
+
+Pass the full JSON object from Step 1 as the agent's prompt, prefixed with:
+
+> Synthesize a context document from this cleaned session JSON and write it to disk. JSON: `<paste full JSON here>`
+
+Wait for the agent to return its confirmation block, then output it verbatim.
+
+---
+
+## Edge Cases
+
+- Step 0 fails → report error, stop
+- Step 1 produces `ERROR:` → report, stop
+- Existing output file → agent appends `_v2`, `_v3` suffix
+- Multiple session IDs in JSON → agent notes in Summary
