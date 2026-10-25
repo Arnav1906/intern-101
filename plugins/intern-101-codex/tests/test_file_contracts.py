@@ -54,7 +54,7 @@ class FileContracts(CodexFixture):
             'name': 'engine', 'status': 'In progress', 'done': 2, 'pending': 2,
             'next': 'Next action', 'gotcha': 'Keep the lock.', 'file': str(progress)}])
 
-    def test_catchup_nested_merge_precedence_limit_and_stale(self):
+    def test_catchup_lists_saved_sessions_without_extraction_gate(self):
         nested = self.project / 'nested'
         nested.mkdir()
         rows = [('2026-01-0' + str(n), 'Root ' + str(n), str(n) + '.md', 'root')
@@ -65,17 +65,19 @@ class FileContracts(CodexFixture):
             ('2026-01-08', 'Extra', 'extra.md', 'secondary'),
             ('2026-01-07', 'More', 'more.md', 'secondary')])
         result = self.output('catchup.py', cwd=nested).splitlines()
-        self.assertEqual(result[0], 'STALE:1')
-        self.assertEqual(len(result[1:]), 5)
-        self.assertEqual(len({r.split(' | ')[2] for r in result[1:]}), 5)
+        self.assertEqual(len(result), 5)
+        self.assertEqual(len({r.split(' | ')[2] for r in result}), 5)
         self.assertIn('2026-01-04 | Root 4 | 4.md | root', result)
         self.assertFalse(any('Duplicate' in r for r in result))
         self.history.unlink()
-        self.assertFalse(self.output('catchup.py', cwd=nested).startswith('STALE:'))
+        self.assertEqual(self.output('catchup.py', cwd=nested).splitlines(), result)
         self.write_history()
         today = datetime.now().strftime('%Y-%m-%d')
         self.index(self.project / 'chat-contexts', rows + [(today, 'Today', 'today.md', 'new')])
         self.assertFalse(self.output('catchup.py', cwd=nested).startswith('STALE:'))
+
+    def test_catchup_with_raw_history_but_no_saved_notes_returns_none(self):
+        self.assertEqual(self.output('catchup.py'), 'NONE')
 
     def test_daily_update_today_yesterday_sections(self):
         folder = self.project / 'chat-contexts'

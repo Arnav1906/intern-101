@@ -58,8 +58,32 @@ class HistoryAdapterTests(CodexFixture):
             with self.subTest(tail=tail):
                 self.history.write_text(json.dumps(self.rows[0]) + "\n" + tail, encoding="utf-8")
                 self.assert_adapter_error("clean_session", str(self.history), message="No readable conversation")
-                self.assert_adapter_error("todays_new_sessions", message="No readable conversation")
-                self.assert_adapter_error("list_todays_jsonl", str(self.home), str(self.project), message="No readable conversation")
+                result = self.adapter_process("todays_new_sessions")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout), [])
+                self.assertIn(self.sid, result.stderr)
+                self.assertEqual(self.adapter("list_todays_jsonl", str(self.home), str(self.project)), [])
+
+    def test_metadata_only_paginated_session_does_not_block_readable_today_session(self):
+        skipped_id = "22222222-2222-4222-8222-222222222222"
+        yesterday = datetime.now().astimezone() - timedelta(days=1)
+        unreadable = self.history.parent / "metadata-only.jsonl"
+        rows = [
+            {"type": "session_meta", "timestamp": yesterday.isoformat(),
+             "payload": {"id": skipped_id, "cwd": str(self.project),
+                         "timestamp": yesterday.isoformat(), "history_mode": "paginated"}},
+            {"type": "event_msg", "timestamp": yesterday.isoformat(),
+             "payload": {"type": "thread_settings_applied"}},
+        ]
+        unreadable.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+        with closing(sqlite3.connect(self.home / "thread_history_1.sqlite")) as db, db:
+            db.execute("CREATE TABLE thread_items (thread_id TEXT, item_json TEXT, rollout_ordinal INTEGER, created_at_ms INTEGER)")
+        result = self.run_script("extract_today.py")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([row["uuid"] for row in json.loads(result.stdout)], [self.sid])
+        self.assertIn(skipped_id, result.stderr)
+        self.assertIn("No readable conversation", result.stderr)
+        self.assert_adapter_error("clean_session", str(unreadable), str(self.project), message="No readable conversation")
 
     def test_missing_session_id_is_rejected(self):
         del self.rows[0]["payload"]["id"]
@@ -144,6 +168,9 @@ class HistoryAdapterTests(CodexFixture):
                 self.sid, json.dumps(self.rows[1]["payload"]), 1, int(datetime.now().timestamp() * 1000)))
         before = {path: path.read_bytes() for path in (state, history)}
         self.assert_adapter_error("latest_session_path", message="rollout file")
-        self.assert_adapter_error("todays_new_sessions", message="rollout file")
-        self.assert_adapter_error("list_todays_jsonl", str(self.home), str(self.project), message="rollout file")
+        result = self.adapter_process("todays_new_sessions")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [])
+        self.assertIn("rollout file", result.stderr)
+        self.assertEqual(self.adapter("list_todays_jsonl", str(self.home), str(self.project)), [])
         self.assertEqual({path: path.read_bytes() for path in before}, before)

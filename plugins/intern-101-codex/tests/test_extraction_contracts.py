@@ -109,9 +109,11 @@ class ExtractionContracts(CodexFixture):
 
     def test_database_only_selection_truthfully_rejects_missing_rollout(self):
         self.database_history(json.dumps(self.rows[1]["payload"]))
-        for script in ("latest_session.py", "extract_today.py"):
-            with self.subTest(script=script):
-                self.assert_cli_error(script, message="rollout file")
+        self.assert_cli_error("latest_session.py", message="rollout file")
+        result = self.run_script("extract_today.py")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [])
+        self.assertIn("rollout file", result.stderr)
 
     def test_bootstrap_creates_usable_helper_and_reruns(self):
         helper = self.project / ".intern101" / "find_project_dir.py"

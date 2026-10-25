@@ -14,10 +14,10 @@ allowed-tools: [Read, Write, Bash]
 Resolve `<plugin-root>` from the loaded skill path as described in the [runtime reference](../../references/runtime.md).
 
 ```bash
-python "<plugin-root>/scripts/extract_today.py" 2>&1
+python "<plugin-root>/scripts/extract_today.py"
 ```
 
-Parse the output as JSON.
+Parse stdout as JSON. Report any `WARNING: Skipped session ...` lines from stderr, including the UUID and reason.
 
 - `ERROR:` → report and stop.
 - `[]` → "No new sessions found for today. All `.jsonl` files are already extracted or none exist." Stop.

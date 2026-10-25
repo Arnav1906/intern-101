@@ -5,10 +5,11 @@ require a real rollout: database-only sessions cannot supply paths or sizes.
 """
 
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 
-from .codex_sessions import discover, local_time, metadata, prepare
+from .codex_sessions import UnreadableConversationError, discover, local_time, metadata, prepare
 from .workspace import belongs_to_project, codex_home, contexts_dir, project_root
 
 
@@ -73,9 +74,18 @@ def known_session_ids(folder):
 def _today_rollouts(home, root):
     today = datetime.now().astimezone().strftime("%Y-%m-%d")
     for selected in discover(home, root):
-        data = prepare(selected, home, root)
+        try:
+            data = prepare(selected, home, root)
+        except UnreadableConversationError as error:
+            print("WARNING: Skipped session {}: {}".format(selected["id"], error), file=sys.stderr)
+            continue
         if today in data["activity_dates"]:
-            yield selected, _rollout_file(selected)
+            try:
+                path = _rollout_file(selected)
+            except ValueError as error:
+                print("WARNING: Skipped session {}: {}".format(selected["id"], error), file=sys.stderr)
+                continue
+            yield selected, path
 
 
 def todays_new_sessions(project=None):

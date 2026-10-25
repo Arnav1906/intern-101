@@ -15,6 +15,10 @@ from pathlib import Path
 from .workspace import belongs_to_project
 
 
+class UnreadableConversationError(ValueError):
+    """A discovered session has no recoverable user or assistant text."""
+
+
 def local_time(value):
     if isinstance(value, (int, float)):
         return datetime.fromtimestamp(value / 1000 if value > 100000000000 else value).astimezone()
@@ -201,7 +205,7 @@ def prepare(session, home, root):
                           "text": prose[:2000], "tools": [label] if label else []})
             files.extend(modified)
     if not any(t["text"] for t in turns):
-        raise ValueError("No readable conversation for session {} ({}). This Codex history format may be unsupported.".format(session["id"], session.get("history_mode", "unknown")))
+        raise UnreadableConversationError("No readable conversation for session {} ({}). This Codex history format may be unsupported.".format(session["id"], session.get("history_mode", "unknown")))
     fallback = local_time(meta.get("timestamp")) or datetime.now().astimezone()
     first, last = (min(times), max(times)) if times else (fallback, fallback)
     digest = hashlib.sha256(json.dumps(signatures, sort_keys=True).encode("utf-8")).hexdigest()

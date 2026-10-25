@@ -15,8 +15,7 @@ model: haiku
 python "${CLAUDE_PLUGIN_ROOT}/scripts/catchup.py" 2>&1
 ```
 
-- `NONE` or no output → tell user: "No session history found. Run `/extract-today` first." Stop.
-- First line is `STALE:<n>` → today's sessions exist but aren't in INDEX.md yet. Tell the user: "Found <n> session(s) from today not yet extracted — want me to run `/extract-today` first, or continue with what's indexed?" Wait for answer before proceeding. The remaining lines are the session list regardless of their choice.
+- `NONE` or no output → tell user: "No extracted sessions found for this project." Stop.
 - Lines returned → proceed to Step 2.
 
 ## Step 2 — Present menu, ask what to load
@@ -32,10 +31,9 @@ Last sessions (up to 5):
   3. <date> — <title>  ← most recent
      <summary>
 
-Which to resume? Load:
+Which session would you like to resume? Load:
   a) Summary only (recommended)
   b) Summary + sub-project progress
-  c) Full detail (summary + transcript)
 ```
 
 **Wait for answer before reading any file.**
@@ -46,12 +44,7 @@ Which to resume? Load:
 Read chosen `chat-contexts/<filename>`. Extract and present only `## Summary`, `## Key Decisions & Findings`, and `## Next Steps`. Do not surface the full file in context.
 
 **Option b — Summary + progress:**
-Read summary sections as above. Then check `projects/` for sub-project name matching session tags. Ask:
-> "Also load `projects/<name>/_progress.md`?"
-Wait for confirmation.
-
-**Option c — Full detail:**
-Read full chat-context file. Ask about `_progress.md` as above.
+Read summary sections as above. Then check `projects/` for sub-project progress matching the session tags and load it. If multiple projects match, ask which one. If none match, say no matching progress file was found.
 
 ## Step 4 — Deliver briefing
 
@@ -62,10 +55,10 @@ Read full chat-context file. Ask about `_progress.md` as above.
 <2-3 sentences from Summary>
 
 **Where you left off:**
-<`## Next Steps` from the context file if present; else pending items from _progress.md if loaded; else last 2-3 assistant turns>
+<`## Next Steps` from the context file if present; else pending items from _progress.md if loaded; else say no next step was recorded>
 
 **Immediate next step:**
-<Single most actionable next thing>
+<Single most actionable next thing, or "No next step recorded" if absent>
 ```
 
 Then ask: *"Want to pick up from here, or is there something new?"*
