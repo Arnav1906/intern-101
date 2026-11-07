@@ -19,3 +19,4 @@ scripts/visualise/
 scripts/lib/graph.py
 agents/graph-analyst.md
 rules/graph-conventions.md
+plugins/intern-101-claude/tests/test_session_slug.py

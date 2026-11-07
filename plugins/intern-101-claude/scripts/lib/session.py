@@ -67,8 +67,8 @@ def list_todays_jsonl(claude_dir: Path, cwd: Path) -> list[Path]:
         # project dir name is the cwd with path separators replaced by hyphens
         dir_name = project_dir.name
         # normalize both sides for comparison
-        normalized_cwd = (cwd_str.replace("\\", "/").replace(":", "-").replace("/", "-")
-                          .replace("'", "").replace(" ", "-").replace("_", "-").lstrip("-"))
+        # Claude replaces every non-alphanumeric character with a hyphen
+        normalized_cwd = re.sub(r"[^A-Za-z0-9]", "-", cwd_str).lstrip("-")
         norm = normalized_cwd.lower()
         dn = dir_name.lower()
         if norm != dn and not dn.endswith("-" + norm):
